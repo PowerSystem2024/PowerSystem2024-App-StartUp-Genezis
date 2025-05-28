@@ -1,4 +1,4 @@
-# controllers/medico_controller.py
+# controllers/med_controller.py
 
 import os
 from dotenv import load_dotenv
