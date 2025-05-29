@@ -1,6 +1,10 @@
 import os
+from math import degrees
+
 from dotenv import load_dotenv
 from supabase import create_client
+from datetime import datetime,timezone
+
 
 load_dotenv()
 
@@ -10,8 +14,11 @@ supabase = create_client(SUPABASE_URL,SUPABASE_KEY)
 
 #==========================================
 # CRUD Institucion
+#==========================================
+def fecha_hora_actual():
+    return datetime.now(timezone.utc)
 
-def obtenerInstitucion(usuario_id,nombre,direccion,telefono,email,descripcion,horario_apertura,horario_cierre,logo_url,creado_en,actualizado_en):
+def crearInstitucion(usuario_id,nombre,direccion,telefono,email,descripcion,horario_apertura,horario_cierre,logo_url):
     data ={
         "usuario_id": usuario_id,
         "nombre": nombre,
@@ -21,7 +28,16 @@ def obtenerInstitucion(usuario_id,nombre,direccion,telefono,email,descripcion,ho
         "descripcion": descripcion,
         "horario_apertura": horario_apertura,
         "horario_cierre": horario_cierre,
-        "creado_en": creado_en,
-        "actualizado_en": actualizado_en,
+        "creado_en": fecha_hora_actual(),
         "logo_url":logo_url
     }
+    return supabase.table("instituciones").insert(data).execute().data
+
+
+def obtenerInstitucion():
+    return supabase.table("instituciones").select("*").execute().data
+
+def ActualizarInstitucion(instituciones_id,nuevo_dato):
+    nuevo_dato["actualizado_en"] = fecha_hora_actual()
+    
+
