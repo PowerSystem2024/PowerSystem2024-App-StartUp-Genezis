@@ -15,8 +15,6 @@ supabase = create_client(SUPABASE_URL,SUPABASE_KEY)
 #==========================================
 # CRUD Institucion
 #==========================================
-def fecha_hora_actual():
-    return datetime.now(timezone.utc)
 
 def crearInstitucion(usuario_id,nombre,direccion,telefono,email,descripcion,horario_apertura,horario_cierre,logo_url):
     data ={
@@ -37,7 +35,14 @@ def crearInstitucion(usuario_id,nombre,direccion,telefono,email,descripcion,hora
 def obtenerInstitucion():
     return supabase.table("instituciones").select("*").execute().data
 
-def ActualizarInstitucion(instituciones_id,nuevo_dato):
-    nuevo_dato["actualizado_en"] = fecha_hora_actual()
+
+def ActualizarInstitucion(instituciones_id,dato_actualizado):
+    dato_actualizado["actualizado_en"] = fecha_hora_actual()
+    return supabase.table("instituciones").update(dato_actualizado).eq("id",instituciones_id).execute().data
+
+
+#=======================================================================================================================
+def fecha_hora_actual():
+    return datetime.now(timezone.utc)
     
 
