@@ -1,5 +1,4 @@
 import os
-from math import degrees
 
 from dotenv import load_dotenv
 from supabase import create_client
