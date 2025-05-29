@@ -39,6 +39,17 @@ def ActualizarInstitucion(instituciones_id,dato_actualizado):
     return supabase.table("instituciones").update(dato_actualizado).eq("id",instituciones_id).execute().data
 
 
+#==========================================
+# CRUD Institucion
+#==========================================
+
+
+
+
+
+
+
+
 #=======================================================================================================================
 def fecha_hora_actual():
     return datetime.now(timezone.utc)

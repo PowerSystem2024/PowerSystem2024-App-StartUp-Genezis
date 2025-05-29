@@ -39,14 +39,20 @@ class InstitucionMainDashboard(tk.Frame):
 
         ttk.Button(
             btn_frame,
-            text="Actualizar Datos",
-            command=self.actualizar_datos
+            text="Medicos",
+            command=self.medicosButton
         ).pack(side=tk.LEFT, padx=5)
 
         ttk.Button(
             btn_frame,
-            text="Ver Información",
-            command=self.mostrar_info
+            text="Editar Información",
+            command=self.editar_info
+        ).pack(side=tk.LEFT, padx=5)
+
+        ttk.Button(
+            btn_frame,
+            text="Calendario",
+            command=self.mostrar_calendario
         ).pack(side=tk.LEFT, padx=5)
 
         ttk.Button(
@@ -93,13 +99,22 @@ class InstitucionMainDashboard(tk.Frame):
                 row=i, column=1, padx=5, pady=2, sticky='w'
             )
 
-    def actualizar_datos(self):
+    def medicosButton(self):
         # Aquí iría la lógica para actualizar datos
         messagebox.showinfo("Info", "Función de actualización en desarrollo")
+        from ui.institucion.Medicos import MedicosDashboard
+        self.current_frame = MedicosDashboard(self, self.current_user)
 
-    def mostrar_info(self):
+    def editar_info(self):
         messagebox.showinfo(
             "Información",
             "Panel de control de la institución\n\n"
             "Aquí puede gestionar la información de su institución médica"
+        )
+
+    def mostrar_calendario(self):
+        messagebox.showinfo(
+            title="Calendario",
+            message= "Panel de control de la institución\n\n"
+            "Aquí puede ver el calendario de su institución médica"
         )
