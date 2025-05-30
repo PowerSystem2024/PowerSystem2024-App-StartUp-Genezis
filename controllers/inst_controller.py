@@ -34,7 +34,7 @@ def obtenerInstitucion():
 
 
 def ActualizarInstitucion(instituciones_id,dato_actualizado):
-    dato_actualizado["actualizado_en"] = fecha_hora_actual()
+    dato_actualizado["actualizado_en"] = fecha_hora_actual().isoformat()
     return supabase.table("instituciones").update(dato_actualizado).eq("id",instituciones_id).execute().data
 
 
