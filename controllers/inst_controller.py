@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv
 from supabase import create_client
 from datetime import datetime,timezone
-from config import fecha_hora_actual
 
 load_dotenv()
 
