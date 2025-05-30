@@ -4,6 +4,7 @@ from controllers import inst_controller
 from ui.institucion.config import ConfigInstitucionFrame
 from ui.institucion.Medicos import MedicosDashboard
 
+
 class InstitucionMainDashboard(Frame):
     def __init__(self, parent, user):
         super().__init__(parent)
@@ -14,10 +15,13 @@ class InstitucionMainDashboard(Frame):
         self.main_frame = Frame(self)
         self.main_frame.pack(fill=BOTH, expand=True, padx=20, pady=20)
 
-        #frame Subpantallas
+        # frame Subpantallas
         self.subframe_container = Frame(self)
         self.subframe_container.pack(fill=BOTH, expand=True, padx=10, pady=10)
         self.current_subframe = None
+
+        # Variables para ventanas separadas
+        self.medicos_window = None
 
         # Título
         Label(
@@ -121,7 +125,34 @@ class InstitucionMainDashboard(Frame):
             self.current_subframe = None
 
     def medicosButton(self):
-        
+        # Verificar si ya existe una ventana de médicos abierta
+        if self.medicos_window is not None and self.medicos_window.winfo_exists():
+            # Si existe, traerla al frente
+            self.medicos_window.lift()
+            self.medicos_window.focus_force()
+            return
+
+        # Crear nueva ventana separada
+        self.medicos_window = Toplevel(self.parent)
+        self.medicos_window.title("Panel de Médicos")
+        self.medicos_window.geometry("800x600")
+
+        # Configurar el comportamiento de cierre
+        self.medicos_window.protocol("WM_DELETE_WINDOW", self.cerrar_ventana_medicos)
+
+        # Crear el dashboard de médicos en la nueva ventana
+        medicos_dashboard = MedicosDashboard(self.medicos_window, self.institucion)
+        medicos_dashboard.pack(fill=BOTH, expand=True, padx=10, pady=10)
+
+        # Hacer que la ventana sea modal (opcional)
+        # self.medicos_window.transient(self.parent)
+        # self.medicos_window.grab_set()
+
+    def cerrar_ventana_medicos(self):
+        """Método para limpiar la referencia cuando se cierra la ventana"""
+        if self.medicos_window:
+            self.medicos_window.destroy()
+            self.medicos_window = None
 
     def editar_info(self):
         self.limpiar_subframe()
@@ -136,6 +167,6 @@ class InstitucionMainDashboard(Frame):
     def mostrar_calendario(self):
         messagebox.showinfo(
             title="Calendario",
-            message= "Panel de control de la institución\n\n"
-            "Aquí puede ver el calendario de su institución médica"
+            message="Panel de control de la institución\n\n"
+                    "Aquí puede ver el calendario de su institución médica"
         )
