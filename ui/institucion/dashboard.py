@@ -102,8 +102,6 @@ class InstitucionMainDashboard(tk.Frame):
     def medicosButton(self):
         # Aquí iría la lógica para actualizar datos
         messagebox.showinfo("Info", "Función de actualización en desarrollo")
-        from ui.institucion.Medicos import MedicosDashboard
-        self.current_frame = MedicosDashboard(self, self.current_user)
 
     def editar_info(self):
         messagebox.showinfo(
