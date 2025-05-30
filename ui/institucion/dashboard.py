@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import messagebox
 from controllers import inst_controller
 from ui.institucion.config import ConfigInstitucionFrame
+from ui.institucion.Medicos import MedicosDashboard
 
 class InstitucionMainDashboard(Frame):
     def __init__(self, parent, user):
@@ -120,8 +121,7 @@ class InstitucionMainDashboard(Frame):
             self.current_subframe = None
 
     def medicosButton(self):
-        # Aquí iría la lógica para actualizar datos
-        messagebox.showinfo("Info", "Función de actualización en desarrollo")
+        
 
     def editar_info(self):
         self.limpiar_subframe()
