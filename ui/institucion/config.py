@@ -4,10 +4,11 @@ from controllers import inst_controller
 
 
 class ConfigInstitucionFrame(Frame):
-    def __init__(self, parent, institucion_data):
-        super().__init__(parent, bg='white')
+    def __init__(self, parent, institucion_data, callback_actualizar=None):
+        super().__init__(parent)
         self.parent = parent
         self.institucion_data = institucion_data
+        self.callback_actualizar = callback_actualizar  # Callback para actualizar el dashboard
 
         # Variables para los campos principales
         self.nombre_var = StringVar(value=institucion_data.get("nombre", ""))
@@ -20,8 +21,6 @@ class ConfigInstitucionFrame(Frame):
         self.crear_interfaz()
 
     def crear_interfaz(self):
-        # Título
-
         # Frame del formulario
         form_frame = LabelFrame(self, text="Datos Principales", font=('Helvetica', 10, 'bold'))
         form_frame.pack(fill=X, padx=20, pady=10)
@@ -56,7 +55,7 @@ class ConfigInstitucionFrame(Frame):
         Entry(right_frame, textvariable=self.horario_cierre_var, width=25).grid(row=2, column=1, padx=(5, 0), pady=5)
 
         # Botones
-        btn_frame = Frame(self, bg='white')
+        btn_frame = Frame(self)
         btn_frame.pack(fill=X, pady=20)
 
         Button(
@@ -101,7 +100,7 @@ class ConfigInstitucionFrame(Frame):
                 "horario_cierre": self.horario_cierre_var.get().strip()
             }
 
-            # Actualizar en la base de datos (el controlador maneja la fecha automáticamente)
+            # Actualizar en la base de datos
             resultado = inst_controller.ActualizarInstitucion(
                 self.institucion_data["id"],
                 datos_actualizados
@@ -109,9 +108,13 @@ class ConfigInstitucionFrame(Frame):
 
             if resultado:
                 messagebox.showinfo("Éxito", "Información actualizada correctamente")
-                # Actualizar datos locales
-                self.institucion_data.update(datos_actualizados)
-                self.destroy()
+
+                # Llamar al callback para actualizar el dashboard
+                if self.callback_actualizar:
+                    self.callback_actualizar()
+                else:
+                    # Si no hay callback, destruir manualmente
+                    self.destroy()
             else:
                 messagebox.showerror("Error", "No se pudo actualizar la información")
 

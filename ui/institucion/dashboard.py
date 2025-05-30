@@ -37,6 +37,10 @@ class InstitucionMainDashboard(Frame):
         self.data_frame.pack(fill=BOTH, expand=True)
 
         # Cargar datos iniciales
+        self.cargar_datos_institucion()
+
+    def cargar_datos_institucion(self):
+        """Método separado para cargar/recargar datos de la institución"""
         try:
             instituciones = inst_controller.obtenerInstitucion()
 
@@ -49,15 +53,16 @@ class InstitucionMainDashboard(Frame):
             if institucion:
                 self.mostrar_datos_institucion(institucion)
                 self.institucion = institucion
-
             else:
                 messagebox.showinfo("Info", "No se encontraron datos de la institución")
 
         except Exception as e:
             messagebox.showerror("Error", f"Error al cargar datos: {str(e)}")
 
-
-
+    def actualizar_datos_dashboard(self):
+        """Callback para actualizar el dashboard cuando se modifiquen los datos"""
+        self.cargar_datos_institucion()
+        self.limpiar_subframe()
 
     def crear_botones(self):
         btn_frame = Frame(self.main_frame)
@@ -120,7 +125,12 @@ class InstitucionMainDashboard(Frame):
 
     def editar_info(self):
         self.limpiar_subframe()
-        self.current_subframe = ConfigInstitucionFrame(self.subframe_container, self.institucion)
+        # Pasar el callback para actualizar el dashboard
+        self.current_subframe = ConfigInstitucionFrame(
+            self.subframe_container,
+            self.institucion,
+            self.actualizar_datos_dashboard
+        )
         self.current_subframe.pack(fill=BOTH, expand=True)
 
     def mostrar_calendario(self):
