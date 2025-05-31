@@ -57,6 +57,9 @@ def crearMedico(usuario_id, institucion_id, especialidad, matricula, duracion_tu
 def obtenerMedicos():
     return supabase.table("medicos").select("*").execute().data
 
+def obtenerMedicosConUsuarios():
+    """Obtiene médicos con información del usuario (nombre y apellido)"""
+    return supabase.table("medicos").select("""*,usuarios!medicos_usuario_id_fkey(nombre, apellido)""").execute().data
 
 def actualizarMedico(medico_id, dato_actualizado):
     dato_actualizado["actualizado_en"] = fecha_hora_actual()
@@ -103,5 +106,5 @@ def eliminarHorario(horario_id):
 #=======================================================================================================================
 def fecha_hora_actual():
     return datetime.now(timezone.utc).isoformat()
-    
+
 

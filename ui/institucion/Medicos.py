@@ -37,7 +37,7 @@ class MedicosDashboard(tk.Frame):
         self.lista_frame.pack(fill=tk.BOTH, expand=True)
 
         # TreeView para médicos
-        columns = ("id", "usuario_id", "especialidad", "matricula", "duracion_turno")
+        columns = ("nombre", "apellido", "especialidad", "matricula", "duracion_turno")
         self.tree = ttk.Treeview(
             self.lista_frame,
             columns=columns,
@@ -45,15 +45,15 @@ class MedicosDashboard(tk.Frame):
         )
 
         # Configurar columnas
-        self.tree.heading('id', text='ID')
-        self.tree.heading('usuario_id', text='Usuario ID')
+        self.tree.heading('nombre', text='Nombre')
+        self.tree.heading('apellido', text='Apellido')
         self.tree.heading('especialidad', text='Especialidad')
         self.tree.heading('matricula', text='Matrícula')
         self.tree.heading('duracion_turno', text='Duración Turno')
 
         # Ajustar anchos de columna
-        self.tree.column('id', width=50)
-        self.tree.column('usuario_id', width=100)
+        self.tree.column('nombre', width=120)
+        self.tree.column('apellido', width=120)
         self.tree.column('especialidad', width=150)
         self.tree.column('matricula', width=100)
         self.tree.column('duracion_turno', width=100)
@@ -83,8 +83,8 @@ class MedicosDashboard(tk.Frame):
             for item in self.tree.get_children():
                 self.tree.delete(item)
 
-            # Obtener médicos
-            medicos = inst_controller.obtenerMedicos()
+            # Obtener médicos con información del usuario
+            medicos = inst_controller.obtenerMedicosConUsuarios()
 
             # Filtrar por institución
             medicos_institucion = [
@@ -94,9 +94,14 @@ class MedicosDashboard(tk.Frame):
 
             # Insertar en TreeView
             for medico in medicos_institucion:
+                # Extraer nombre y apellido del usuario relacionado
+                usuario = medico.get("usuarios", {})
+                nombre = usuario.get("nombre", "N/A") if usuario else "N/A"
+                apellido = usuario.get("apellido", "N/A") if usuario else "N/A"
+
                 self.tree.insert("", tk.END, values=(
-                    medico["id"],
-                    medico["usuario_id"],
+                    nombre,
+                    apellido,
                     medico["especialidad"],
                     medico["matricula"],
                     medico["duracion_turno"]
