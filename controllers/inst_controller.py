@@ -34,7 +34,7 @@ def obtenerInstitucion():
 
 
 def ActualizarInstitucion(instituciones_id,dato_actualizado):
-    dato_actualizado["actualizado_en"] = fecha_hora_actual().isoformat()
+    dato_actualizado["actualizado_en"] = fecha_hora_actual()
     return supabase.table("instituciones").update(dato_actualizado).eq("id",instituciones_id).execute().data
 
 
@@ -102,6 +102,6 @@ def eliminarHorario(horario_id):
 
 #=======================================================================================================================
 def fecha_hora_actual():
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc).isoformat()
     
 
