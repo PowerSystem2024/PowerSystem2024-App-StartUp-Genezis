@@ -165,8 +165,20 @@ class InstitucionMainDashboard(Frame):
         self.current_subframe.pack(fill=BOTH, expand=True)
 
     def mostrar_calendario(self):
-        messagebox.showinfo(
-            title="Calendario",
-            message="Panel de control de la institución\n\n"
-                    "Aquí puede ver el calendario de su institución médica"
-        )
+        try:
+            # Cerrar ventana anterior si existe
+            if hasattr(self, 'horarios_window'):
+                self.horarios_window.destroy()
+            
+            # Crear nueva ventana
+            from .horarios import HorariosDisponiblesManager
+            self.horarios_window = HorariosDisponiblesManager(
+                self, 
+                self.institucion["id"]
+            )
+        
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                f"Error al mostrar calendario: {str(e)}"
+            )
