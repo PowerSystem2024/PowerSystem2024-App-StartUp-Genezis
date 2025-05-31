@@ -21,12 +21,24 @@ class MedicosDashboard(tk.Frame):
         self.cargar_datos()
 
     def crear_widgets(self):
-        # Título
-        ttk.Label(
-            self.main_frame,
-            text="Gestión de Médicos",
-            font=('Helvetica', 14, 'bold')
-        ).pack(pady=(0, 20))
+
+        # Frame para botones
+        btn_frame = ttk.Frame(self.main_frame)
+        btn_frame.pack(fill=tk.X, pady=10)  # Los botones se empaquetan en la parte superior
+
+        # Botones dentro del btn_frame
+        ttk.Button(
+            btn_frame,
+            text="Agregar Médico",
+            command=self.agregar_medico
+        ).pack(side=tk.RIGHT, padx=5)
+
+        ttk.Button(
+            btn_frame,
+            text="Eliminar Médico",
+            command=self.eliminar_medico
+        ).pack(side=tk.RIGHT, padx=5)
+        # --- FIN DEL CAMBIO ---
 
         # Frame para lista de médicos
         self.lista_frame = ttk.LabelFrame(
@@ -34,10 +46,11 @@ class MedicosDashboard(tk.Frame):
             text="Médicos Registrados",
             padding="10"
         )
+        # Ahora, self.lista_frame se empaqueta después de btn_frame, y se expandirá para llenar el espacio restante
         self.lista_frame.pack(fill=tk.BOTH, expand=True)
 
         # TreeView para médicos
-        columns = ("nombre", "apellido", "especialidad", "matricula", "duracion_turno")
+        columns = ("#id", "nombre", "apellido", "especialidad", "matricula", "duracion_turno")
         self.tree = ttk.Treeview(
             self.lista_frame,
             columns=columns,
@@ -51,6 +64,9 @@ class MedicosDashboard(tk.Frame):
         self.tree.heading('matricula', text='Matrícula')
         self.tree.heading('duracion_turno', text='Duración Turno')
 
+        # Ocultar la columna del ID
+        self.tree.column("#id", width=0, stretch=tk.NO)
+
         # Ajustar anchos de columna
         self.tree.column('nombre', width=120)
         self.tree.column('apellido', width=120)
@@ -59,23 +75,6 @@ class MedicosDashboard(tk.Frame):
         self.tree.column('duracion_turno', width=100)
 
         self.tree.pack(fill=tk.BOTH, expand=True, pady=5)
-
-        # Frame para botones
-        btn_frame = ttk.Frame(self.main_frame)
-        btn_frame.pack(fill=tk.X, pady=10)
-
-        # Botones
-        ttk.Button(
-            btn_frame,
-            text="Agregar Médico",
-            command=self.agregar_medico
-        ).pack(side=tk.RIGHT, padx=5)
-
-        ttk.Button(
-            btn_frame,
-            text="Eliminar Médico",
-            command=self.eliminar_medico
-        ).pack(side=tk.RIGHT, padx=5)
 
     def cargar_datos(self):
         try:
@@ -89,17 +88,17 @@ class MedicosDashboard(tk.Frame):
             # Filtrar por institución
             medicos_institucion = [
                 m for m in medicos
-                if m["institucion_id"] == self.institucion["id"]  # Usar el ID de la institución
+                if m["institucion_id"] == self.institucion["id"]
             ]
 
             # Insertar en TreeView
             for medico in medicos_institucion:
-                # Extraer nombre y apellido del usuario relacionado
                 usuario = medico.get("usuarios", {})
                 nombre = usuario.get("nombre", "N/A") if usuario else "N/A"
                 apellido = usuario.get("apellido", "N/A") if usuario else "N/A"
 
-                self.tree.insert("", tk.END, values=(
+                self.tree.insert("", tk.END, iid=medico["id"], values=(
+                    medico["id"],  # El ID se almacena en la primera columna oculta
                     nombre,
                     apellido,
                     medico["especialidad"],
@@ -114,13 +113,11 @@ class MedicosDashboard(tk.Frame):
             )
 
     def agregar_medico(self):
-        """Abre el diálogo para agregar un nuevo médico"""
-        dialogo = AgregarMedicoDialog(self.parent)
-        self.parent.wait_window(dialogo.dialog)
+        dialogo = AgregarMedicoDialog(self.winfo_toplevel())  # Pasa la ventana principal como padre
+        self.winfo_toplevel().wait_window(dialogo.dialog)
 
         if dialogo.resultado:
             try:
-                # Crear usuario primero
                 auth_controller = AuthController()
                 user_data = {
                     "nombre": dialogo.resultado["nombre"],
@@ -133,7 +130,6 @@ class MedicosDashboard(tk.Frame):
                 nuevo_usuario = auth_controller.register(user_data)
 
                 if nuevo_usuario:
-                    # Crear médico con el ID del usuario creado
                     inst_controller.crearMedico(
                         usuario_id=nuevo_usuario["id"],
                         institucion_id=self.institucion["id"],
@@ -155,7 +151,7 @@ class MedicosDashboard(tk.Frame):
         if not seleccion:
             messagebox.showwarning(
                 "Advertencia",
-                "Por favor seleccione un médico"
+                "Por favor seleccione un médico para eliminar."
             )
             return
 
@@ -164,12 +160,13 @@ class MedicosDashboard(tk.Frame):
                 "¿Está seguro que desea eliminar el médico seleccionado?"
         ):
             try:
-                medico_id = self.tree.item(seleccion[0])["values"][0]
-                inst_controller.eliminarMedico(medico_id)
+                medico_id_to_delete = self.tree.item(seleccion[0], "iid")
+
+                inst_controller.eliminarMedico(medico_id_to_delete)
                 self.cargar_datos()
                 messagebox.showinfo(
                     "Éxito",
-                    "Médico eliminado correctamente"
+                    "Médico eliminado correctamente."
                 )
             except Exception as e:
                 messagebox.showerror(
@@ -177,61 +174,54 @@ class MedicosDashboard(tk.Frame):
                     f"Error al eliminar médico: {str(e)}"
                 )
 
+
 class AgregarMedicoDialog:
     """Diálogo para agregar un nuevo médico"""
 
     def __init__(self, parent):
         self.resultado = None
 
-        # Crear ventana de diálogo
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("Agregar Nuevo Médico")
-        self.dialog.geometry("400x500")
+        self.dialog.geometry("400x500")  # Se mantiene el tamaño fijo
         self.dialog.resizable(False, False)
 
-        # Hacer la ventana modal
         self.dialog.transient(parent)
         self.dialog.grab_set()
 
-        # Centrar la ventana
-        self.centrar_ventana()
-
-        # Crear widgets
-        self.crear_widgets()
+        self.crear_widgets()  # Crear widgets antes de centrar
+        self.centrar_ventana()  # Centrar después de que los widgets estén creados y el tamaño sea definitivo
 
     def centrar_ventana(self):
         """Centrar la ventana en la pantalla"""
-        self.dialog.update_idletasks()
-        x = (self.dialog.winfo_screenwidth() // 2) - (400 // 2)
-        y = (self.dialog.winfo_screenheight() // 2) - (500 // 2)
-        self.dialog.geometry(f"400x500+{x}+{y}")
+        self.dialog.update_idletasks()  # Asegura que los widgets se hayan renderizado para obtener el tamaño
+        width = self.dialog.winfo_width()
+        height = self.dialog.winfo_height()
+        x = (self.dialog.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.dialog.winfo_screenheight() // 2) - (height // 2)
+        self.dialog.geometry(f"+{x}+{y}")  # Establece solo la posición, no el tamaño
 
     def crear_widgets(self):
-        # Frame principal
         main_frame = ttk.Frame(self.dialog, padding="20")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Título
         ttk.Label(
             main_frame,
             text="Datos del Médico",
             font=('Helvetica', 14, 'bold')
         ).pack(pady=(0, 20))
 
-        # Frame para formulario
         form_frame = ttk.Frame(main_frame)
         form_frame.pack(fill=tk.X, pady=10)
 
-        # Variables de entrada
         self.nombre_var = tk.StringVar()
         self.apellido_var = tk.StringVar()
         self.email_var = tk.StringVar()
         self.password_var = tk.StringVar()
         self.especialidad_var = tk.StringVar()
         self.matricula_var = tk.StringVar()
-        self.duracion_turno_var = tk.StringVar(value="30")  # valor por defecto
+        self.duracion_turno_var = tk.StringVar(value="30")
 
-        # Campos del formulario
         campos = [
             ("Nombre:", self.nombre_var),
             ("Apellido:", self.apellido_var),
@@ -245,12 +235,10 @@ class AgregarMedicoDialog:
         self.entries = {}
 
         for i, (label_text, var) in enumerate(campos):
-            # Label
             ttk.Label(form_frame, text=label_text).grid(
                 row=i, column=0, sticky='e', padx=(0, 10), pady=5
             )
 
-            # Entry
             if label_text == "Contraseña:":
                 entry = ttk.Entry(form_frame, textvariable=var, show="*", width=25)
             else:
@@ -259,11 +247,9 @@ class AgregarMedicoDialog:
             entry.grid(row=i, column=1, sticky='w', pady=5)
             self.entries[label_text] = entry
 
-        # Frame para botones
         btn_frame = ttk.Frame(main_frame)
         btn_frame.pack(fill=tk.X, pady=20)
 
-        # Botones
         ttk.Button(
             btn_frame,
             text="Cancelar",
@@ -276,11 +262,9 @@ class AgregarMedicoDialog:
             command=self.guardar
         ).pack(side=tk.RIGHT, padx=5)
 
-        # Enfocar el primer campo
         self.entries["Nombre:"].focus()
 
     def validar_datos(self):
-        """Validar que todos los campos estén llenos"""
         campos_vacios = []
 
         if not self.nombre_var.get().strip():
@@ -305,20 +289,27 @@ class AgregarMedicoDialog:
             )
             return False
 
-        # Validar que la duración del turno sea un número
         try:
-            int(self.duracion_turno_var.get())
+            duration = int(self.duracion_turno_var.get())
+            if duration <= 0:
+                raise ValueError
         except ValueError:
             messagebox.showerror(
                 "Error de Validación",
-                "La duración del turno debe ser un número válido"
+                "La duración del turno debe ser un número entero positivo."
+            )
+            return False
+
+        if "@" not in self.email_var.get() or "." not in self.email_var.get():
+            messagebox.showerror(
+                "Error de Validación",
+                "Por favor ingrese un email válido."
             )
             return False
 
         return True
 
     def guardar(self):
-        """Guardar los datos del médico"""
         if self.validar_datos():
             self.resultado = {
                 "nombre": self.nombre_var.get().strip(),
@@ -332,5 +323,4 @@ class AgregarMedicoDialog:
             self.dialog.destroy()
 
     def cancelar(self):
-        """Cancelar la operación"""
         self.dialog.destroy()
