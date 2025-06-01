@@ -104,7 +104,8 @@ def eliminarHorario(horario_id):
 # ==========================================
 # CRUD Turnos
 # ==========================================
-def crearTurno(paciente_id, medico_id, institucion_id, fecha, hora_inicio, hora_fin, estado, motivo_consulta=None, notas=None):
+def crearTurno(paciente_id, medico_id, institucion_id, fecha, hora_inicio, hora_fin, estado, motivo_consulta=None):
+    """Crea un nuevo turno"""
     data = {
         "paciente_id": paciente_id,
         "medico_id": medico_id,
@@ -114,81 +115,71 @@ def crearTurno(paciente_id, medico_id, institucion_id, fecha, hora_inicio, hora_
         "hora_fin": hora_fin,
         "estado": estado,
         "motivo_consulta": motivo_consulta,
-        "notas": notas,
         "creado_en": fecha_hora_actual()
     }
     return supabase.table("turnos").insert(data).execute().data
 
-def obtenerTurnos():
-    return supabase.table("turnos").select("*").execute().data
-
-def obtenerTurnosPorPaciente(paciente_id):
-    """Obtiene todos los turnos de un paciente específico."""
-    return supabase.table("turnos").select("*").eq("paciente_id", paciente_id).execute().data
-
-def obtenerTurnosPorMedico(medico_id):
-    """Obtiene todos los turnos de un médico específico."""
-    return supabase.table("turnos").select("*").eq("medico_id", medico_id).execute().data
-
+#----------------------------------------------------------------------------------------------------------------------
 
 def obtenerTurnosConDetalles():
-    """
-    Obtiene todos los turnos con información detallada del paciente, médico e institución.
-    Si los joins automáticos de Supabase fallan, realiza las uniones manualmente.
-    """
-    turnos_data = supabase.table("turnos").select("*").execute().data
+    """Método de respaldo con joins manuales"""
+    print(f"Usando Metodo manual para obtenerTurnosConDetalles")
+    try:
+        turnos_data = supabase.table("turnos").select("*").execute().data
+        if not turnos_data:
+            return []
 
-    if not turnos_data:
+        # Obtener IDs únicos
+        medico_ids = list({t["medico_id"] for t in turnos_data if t.get("medico_id")})
+        paciente_ids = list({t["paciente_id"] for t in turnos_data if t.get("paciente_id")})
+        institucion_ids = list({t["institucion_id"] for t in turnos_data if t.get("institucion_id")})
+
+        # Obtener datos de médicos
+        medicos_detalles = {}
+        if medico_ids:
+            medicos_results = supabase.table("medicos").select(
+                "*, usuarios(nombre, apellido)"
+            ).in_("id", medico_ids).execute().data
+            medicos_detalles = {m["id"]: m for m in medicos_results if m and "id" in m}
+
+        # Obtener datos de pacientes
+        pacientes_detalles = {}
+        if paciente_ids:
+            pacientes_results = supabase.table("pacientes").select(
+                "*, usuarios(nombre, apellido)"
+            ).in_("id", paciente_ids).execute().data
+            pacientes_detalles = {p["id"]: p for p in pacientes_results if p and "id" in p}
+
+        # Obtener datos de instituciones
+        instituciones_detalles = {}
+        if institucion_ids:
+            instituciones_results = supabase.table("instituciones").select(
+                "id, nombre, direccion"
+            ).in_("id", institucion_ids).execute().data
+            instituciones_detalles = {i["id"]: i for i in instituciones_results if i and "id" in i}
+
+        # Agregar datos relacionados a cada turno
+        for turno in turnos_data:
+            turno["medicos"] = medicos_detalles.get(turno.get("medico_id"))
+            turno["pacientes"] = pacientes_detalles.get(turno.get("paciente_id"))
+            turno["instituciones"] = instituciones_detalles.get(turno.get("institucion_id"))
+
+        return turnos_data
+
+    except Exception as e:
+        print(f"Error en obtenerTurnosConDetalles_manual: {e}")
         return []
 
-    # Obtener todos los IDs de médicos, pacientes e instituciones
-    medico_ids = list(set([t.get("medico_id") for t in turnos_data if t.get("medico_id")]))
-    paciente_ids = list(set([t.get("paciente_id") for t in turnos_data if t.get("paciente_id")]))
-    institucion_ids = list(set([t.get("institucion_id") for t in turnos_data if t.get("institucion_id")]))
 
-    # Obtener datos de médicos y sus usuarios
-    medicos_detalles = {}
-    if medico_ids:
-        medicos_results = supabase.table("medicos").select("*, usuarios(nombre, apellido)").in_("id",
-                                                                                                medico_ids).execute().data
-        for m in medicos_results:
-            # *** VERIFICACIÓN Y DEPURAICÓN AÑADIDA AQUÍ ***
-            if m and "id" in m:  # Asegura que m no es None y tiene la clave 'id'
-                medicos_detalles[m["id"]] = m
-            else:
-                print(f"DEBUG ERROR: Objeto médico sin 'id' encontrado o nulo: {m}")
+def actualizarTurno(turno_id, datos_actualizados):
+    """Actualiza un turno existente"""
+    datos_actualizados["actualizado_en"] = fecha_hora_actual()
+    return supabase.table("turnos").update(datos_actualizados).eq("id", turno_id).execute().data
 
-    # Obtener datos de pacientes y sus usuarios
-    pacientes_detalles = {}
-    if paciente_ids:
-        pacientes_results = supabase.table("pacientes").select("*, usuarios(nombre, apellido)").in_("id",
-                                                                                                    paciente_ids).execute().data
-        for p in pacientes_results:
-            # *** VERIFICACIÓN Y DEPURAICÓN AÑADIDA AQUÍ ***
-            if p and "id" in p:  # Asegura que p no es None y tiene la clave 'id'
-                pacientes_detalles[p["id"]] = p
-            else:
-                print(f"DEBUG ERROR: Objeto paciente sin 'id' encontrado o nulo: {p}")
 
-    # Obtener datos de instituciones
-    instituciones_detalles = {}
-    if institucion_ids:
-        instituciones_results = supabase.table("instituciones").select("id, nombre, direccion, telefono, email").in_(
-            "id", institucion_ids).execute().data
-        for i in instituciones_results:
-            # *** VERIFICACIÓN Y DEPURAICÓN AÑADIDA AQUÍ ***
-            if i and "id" in i:  # Asegura que i no es None y tiene la clave 'id'
-                instituciones_detalles[i["id"]] = i
-            else:
-                print(f"DEBUG ERROR: Objeto institución sin 'id' encontrado o nulo: {i}")
-
-    # Unir los datos
-    for turno in turnos_data:
-        turno["medicos"] = medicos_detalles.get(turno.get("medico_id"))
-        turno["pacientes"] = pacientes_detalles.get(turno.get("paciente_id"))
-        turno["instituciones"] = instituciones_detalles.get(turno.get("institucion_id"))
-
-    return turnos_data
+def eliminarTurno(turno_id):
+    """Elimina un turno"""
+    return supabase.table("turnos").delete().eq("id", turno_id).execute().data
 
 #=======================================================================================================================
 def fecha_hora_actual():
