@@ -51,8 +51,8 @@ class HorariosDisponiblesManager(tk.Toplevel):
         )
         horarios_frame.pack(fill=tk.BOTH, expand=True)
 
-        # TreeView para horarios
-        columns = ("hora", "estado")
+        # TreeView con nuevas columnas
+        columns = ("medico", "hora", "paciente", "estado")
         self.tree = ttk.Treeview(
             horarios_frame, 
             columns=columns, 
@@ -60,23 +60,74 @@ class HorariosDisponiblesManager(tk.Toplevel):
         )
         
         # Configurar columnas
+        self.tree.heading('medico', text='Médico')
         self.tree.heading('hora', text='Hora')
+        self.tree.heading('paciente', text='Paciente')
         self.tree.heading('estado', text='Estado')
         
+        self.tree.column('medico', width=200)
         self.tree.column('hora', width=150)
-        self.tree.column('estado', width=150)
+        self.tree.column('paciente', width=200)
+        self.tree.column('estado', width=100)
         
         self.tree.pack(fill=tk.BOTH, expand=True)
 
     def on_fecha_seleccionada(self, event=None):
         try:
             fecha = self.calendar.get_date()
-            # Limpiar TreeView
-            for item in self.tree.get_children():
-                self.tree.delete(item)
+            self.cargar_horarios_fecha(fecha)
             
         except Exception as e:
             messagebox.showerror(
                 "Error",
                 f"Error al procesar la fecha: {str(e)}"
             )
+
+    def cargar_horarios_fecha(self, fecha):
+        try:
+            # Limpiar TreeView
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+
+            # Obtener turnos
+            turnos = inst_controller.obtener_turnos_fecha(
+                self.institucion_id, 
+                fecha
+            )
+
+            if not turnos:
+                self.tree.insert("", tk.END, values=(
+                    "-",
+                    "-",
+                    "-",
+                    "Sin turnos disponibles"
+                ))
+                return
+
+            # Insertar turnos
+            for turno in turnos:
+                # Obtener datos del médico
+                medico = turno.get('medicos', {})
+                medico_usuario = medico.get('usuarios', {})
+            
+                # Obtener datos del paciente
+                paciente = turno.get('pacientes', {})
+                paciente_usuario = paciente.get('usuarios', {})
+            
+                # Formatear datos
+                nombre_medico = f"{medico_usuario.get('nombre', '')} {medico_usuario.get('apellido', '')}"
+                nombre_paciente = f"{paciente_usuario.get('nombre', '')} {paciente_usuario.get('apellido', '')}"
+            
+                self.tree.insert("", tk.END, values=(
+                    nombre_medico,
+                    f"{turno.get('hora_inicio', '')} - {turno.get('hora_fin', '')}",
+                    nombre_paciente if nombre_paciente.strip() else "Sin asignar",
+                    'Ocupado' if paciente else 'Disponible'
+                ))
+
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                f"Error al cargar horarios: {str(e)}"
+            )
+            print(f"Error detallado: {str(e)}")

@@ -142,7 +142,36 @@ def eliminarTurno(turno_id):
     """Elimina un turno específico por su ID."""
     return supabase.table("turnos").delete().eq("id", turno_id).execute().data
 
-
+def obtener_turnos_fecha(institucion_id, fecha):
+    """Obtiene los turnos para una fecha específica"""
+    try:
+        return supabase.table("turnos")\
+            .select("""
+                *,
+                medicos (
+                    id,
+                    especialidad,
+                    matricula,
+                    usuarios!medicos_usuario_id_fkey (
+                        nombre,
+                        apellido
+                    )
+                ),
+                pacientes (
+                    id,
+                    usuarios!pacientes_usuario_id_fkey (
+                        nombre,
+                        apellido
+                    )
+                )
+            """)\
+            .eq("institucion_id", institucion_id)\
+            .eq("fecha", fecha)\
+            .execute()\
+            .data
+    except Exception as e:
+        print(f"Error al obtener turnos: {str(e)}")
+        raise Exception(f"Error al obtener turnos: {str(e)}")
 
 #=======================================================================================================================
 def fecha_hora_actual():
