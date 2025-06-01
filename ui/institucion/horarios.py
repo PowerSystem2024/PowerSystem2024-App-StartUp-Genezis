@@ -2,7 +2,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from tkcalendar import Calendar
 from controllers import inst_controller
+import json
 from datetime import datetime
+
 
 class HorariosDisponiblesManager(tk.Toplevel):
     def __init__(self, parent, institucion_id):
@@ -89,40 +91,75 @@ class HorariosDisponiblesManager(tk.Toplevel):
             for item in self.tree.get_children():
                 self.tree.delete(item)
 
-            # Obtener turnos
-            turnos = inst_controller.obtener_turnos_fecha(
-                self.institucion_id, 
-                fecha
-            )
+            all_turnos_detallados = inst_controller.obtenerTurnosConDetalles()
 
-            if not turnos:
+            turnos_filtrados = []
+            if all_turnos_detallados:
+                for turno in all_turnos_detallados:
+                    if turno.get('institucion_id') == self.institucion_id and \
+                            turno.get('fecha') == fecha:
+                        turnos_filtrados.append(turno)
+
+            # Debugging (el JSON de aquí debería ser el que queremos ahora)
+            print("\n--- Datos de Turnos Filtrados (para debugging) ---")
+            if turnos_filtrados:
+                for i, t in enumerate(turnos_filtrados):
+                    print(f"Turno {i + 1}:")
+                    print(json.dumps(t, indent=2))
+            else:
+                print("No se encontraron turnos para la fecha y institución seleccionadas.")
+            print("---------------------------------------------------\n")
+
+            if not turnos_filtrados:
                 self.tree.insert("", tk.END, values=(
                     "-",
                     "-",
                     "-",
-                    "Sin turnos disponibles"
+                    "Sin turnos agendados para esta fecha en esta institución"
                 ))
                 return
 
-            # Insertar turnos
-            for turno in turnos:
-                # Obtener datos del médico
-                medico = turno.get('medicos', {})
-                medico_usuario = medico.get('usuarios', {})
-            
-                # Obtener datos del paciente
-                paciente = turno.get('pacientes', {})
-                paciente_usuario = paciente.get('usuarios', {})
-            
-                # Formatear datos
-                nombre_medico = f"{medico_usuario.get('nombre', '')} {medico_usuario.get('apellido', '')}"
-                nombre_paciente = f"{paciente_usuario.get('nombre', '')} {paciente_usuario.get('apellido', '')}"
-            
+            for turno in turnos_filtrados:
+                # Acceso a los datos del médico
+                nombre_medico = "Médico (no disponible)"
+                medico_data = turno.get('medicos', {})  # Obtiene el objeto 'medicos'
+
+                # Accede al objeto 'usuarios' (no 'usuario') ya que es la forma estándar cuando es una sola FK a 'usuarios'
+                medico_usuario_data = medico_data.get('usuarios', {})
+
+                if medico_usuario_data and isinstance(medico_usuario_data, dict):
+                    nombre = medico_usuario_data.get('nombre', '')
+                    apellido = medico_usuario_data.get('apellido', '')
+                    nombre_medico = f"{nombre} {apellido}".strip()
+                    if not nombre_medico:
+                        nombre_medico = "Médico (nombre no especificado)"
+
+                # Acceso a los datos del paciente
+                nombre_paciente = "No asignado"
+                paciente_data = turno.get('pacientes', {})  # Obtiene el objeto 'pacientes'
+
+                # Accede al objeto 'usuarios' (no 'usuario')
+                paciente_usuario_data = paciente_data.get('usuarios', {})
+
+                if paciente_usuario_data and isinstance(paciente_usuario_data, dict):
+                    nombre = paciente_usuario_data.get('nombre', '')
+                    apellido = paciente_usuario_data.get('apellido', '')
+                    nombre_paciente = f"{nombre} {apellido}".strip()
+                    if not nombre_paciente:
+                        if turno.get('paciente_id'):
+                            nombre_paciente = "Paciente (nombre no especificado)"
+                        else:
+                            nombre_paciente = "No asignado"
+                elif turno.get('paciente_id'):
+                    nombre_paciente = "Paciente (nombre no especificado)"
+
+                estado_turno = turno.get('estado', 'Estado Desconocido')
+
                 self.tree.insert("", tk.END, values=(
                     nombre_medico,
-                    f"{turno.get('hora_inicio', '')} - {turno.get('hora_fin', '')}",
-                    nombre_paciente if nombre_paciente.strip() else "Sin asignar",
-                    'Ocupado' if paciente else 'Disponible'
+                    f"{turno.get('hora_inicio', 'HH:MM')} - {turno.get('hora_fin', 'HH:MM')}",
+                    nombre_paciente,
+                    estado_turno
                 ))
 
         except Exception as e:
@@ -130,4 +167,4 @@ class HorariosDisponiblesManager(tk.Toplevel):
                 "Error",
                 f"Error al cargar horarios: {str(e)}"
             )
-            print(f"Error detallado: {str(e)}")
+            print(f"Error detallado en cargar_horarios_fecha: {str(e)}")  # Para debug
