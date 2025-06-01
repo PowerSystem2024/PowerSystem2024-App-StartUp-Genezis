@@ -73,18 +73,17 @@ def eliminarMedico(medico_id):
 #==========================================
 # CRUD Horarios Disponibles
 #==========================================
-
-def crearHorario(medico_id, dia_semana, hora_inicio, hora_fin, activo=True):
+def crearHorario(medico_id, dia_semana, hora_inicio, hora_fin, fecha_turno, activo=True):
     data = {
         "medico_id": medico_id,
         "dia_semana": dia_semana,
         "hora_inicio": hora_inicio,
         "hora_fin": hora_fin,
         "activo": activo,
+        "fecha_turno": fecha_turno,
         "creado_en": fecha_hora_actual()
     }
     return supabase.table("horarios_disponibles").insert(data).execute().data
-
 
 def obtenerHorarios():
     return supabase.table("horarios_disponibles").select("*").execute().data
@@ -101,6 +100,48 @@ def actualizarHorario(horario_id, datos_actualizados):
 
 def eliminarHorario(horario_id):
     return supabase.table("horarios_disponibles").delete().eq("id", horario_id).execute().data
+
+# ==========================================
+# CRUD Turnos
+# ==========================================
+def crearTurno(paciente_id, medico_id, institucion_id, fecha, hora_inicio, hora_fin, estado, motivo_consulta=None, notas=None):
+    data = {
+        "paciente_id": paciente_id,
+        "medico_id": medico_id,
+        "institucion_id": institucion_id,
+        "fecha": fecha,
+        "hora_inicio": hora_inicio,
+        "hora_fin": hora_fin,
+        "estado": estado,
+        "motivo_consulta": motivo_consulta,
+        "notas": notas,
+        "creado_en": fecha_hora_actual()
+    }
+    return supabase.table("turnos").insert(data).execute().data
+
+def obtenerTurnos():
+    return supabase.table("turnos").select("*").execute().data
+
+def obtenerTurnosPorPaciente(paciente_id):
+    """Obtiene todos los turnos de un paciente específico."""
+    return supabase.table("turnos").select("*").eq("paciente_id", paciente_id).execute().data
+
+def obtenerTurnosPorMedico(medico_id):
+    """Obtiene todos los turnos de un médico específico."""
+    return supabase.table("turnos").select("*").eq("medico_id", medico_id).execute().data
+
+def obtenerTurnosConDetalles():
+    return supabase.table("turnos").select("""
+        *,
+        pacientes(usuario_id, fecha_nacimiento, genero, telefono, obra_social, num_afiliado, usuarios!pacientes_usuario_id_fkey(nombre, apellido)),
+        medicos(usuario_id, especialidad, matricula, duracion_turno, usuarios!medicos_usuario_id_fkey(nombre, apellido)),
+        instituciones(nombre, direccion, telefono, email)
+    """).execute().data
+
+def eliminarTurno(turno_id):
+    """Elimina un turno específico por su ID."""
+    return supabase.table("turnos").delete().eq("id", turno_id).execute().data
+
 
 
 #=======================================================================================================================

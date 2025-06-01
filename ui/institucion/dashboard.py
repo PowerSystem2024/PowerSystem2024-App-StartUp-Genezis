@@ -2,7 +2,7 @@ from tkinter import *
 from tkinter import messagebox
 from controllers import inst_controller
 from ui.institucion.config import ConfigInstitucionFrame
-from ui.institucion.Medicos import MedicosDashboard  # Asegúrate de que esta importación sea correcta
+from ui.institucion.Medicos import MedicosDashboard
 
 
 class InstitucionMainDashboard(Frame):

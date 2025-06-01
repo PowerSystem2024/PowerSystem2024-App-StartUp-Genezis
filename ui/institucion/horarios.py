@@ -74,11 +74,6 @@ class HorariosDisponiblesManager(tk.Toplevel):
             # Limpiar TreeView
             for item in self.tree.get_children():
                 self.tree.delete(item)
-                
-            messagebox.showinfo(
-                "Fecha Seleccionada",
-                f"Has seleccionado: {fecha}"
-            )
             
         except Exception as e:
             messagebox.showerror(
