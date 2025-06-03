@@ -1,20 +1,21 @@
 from tkinter import *
 from ui.pacientes.perfil import PerfilFrame
-
+from ui.pacientes.turnos import TurnosPacienteFrame
 
 class PacienteDashboard(Frame):
-    def __init__(self, parent, paciente_id):
+    def __init__(self, parent, paciente_id, volver_callback=None):
         super().__init__(parent)
         self.parent = parent
         self.paciente_id = paciente_id
+        self.volver_callback = volver_callback
 
-        Label(self, text="Panel del Paciente", font=("Arial", 18, "bold")).pack(pady=10)
+        self.main_container = Frame(self)
+        self.main_container.pack(side=TOP, anchor=N, pady=50)
 
-        Button(self, text="Ver / Editar Perfil", width=25, command=self.mostrar_perfil).pack(pady=5)
+        Label(self.main_container, text="Panel del Paciente", font=("Arial", 18, "bold")).pack(pady=10)
 
-
-        self.subframe_container = Frame(self)
-        self.subframe_container.pack(fill=BOTH, expand=True, padx=10, pady=10)
+        Button(self.main_container, text="Ver / Editar Perfil", width=25, command=self.mostrar_perfil).pack(pady=5)
+        Button(self.main_container, text="Mis Turnos", width=25, command=self.mostrar_turnos).pack(pady=5)
 
         self.current_subframe = None
 
@@ -24,11 +25,20 @@ class PacienteDashboard(Frame):
             self.current_subframe = None
 
     def mostrar_perfil(self):
+        self.ocultar_dashboard()
         self.limpiar_subframe()
-        perfil = PerfilFrame(self.subframe_container, self.paciente_id)
+        self.current_subframe = PerfilFrame(self, self.paciente_id, volver_callback=self.mostrar_dashboard)
+        self.current_subframe.pack(fill=BOTH, expand=True)
 
+    def mostrar_turnos(self):
+        self.ocultar_dashboard()
+        self.limpiar_subframe()
+        self.current_subframe = TurnosPacienteFrame(self, self.paciente_id, volver_callback=self.mostrar_dashboard)
+        self.current_subframe.pack(fill=BOTH, expand=True)
 
-        perfil.pack(fill=BOTH, expand=True)
-        self.current_subframe = perfil
+    def ocultar_dashboard(self):
+        self.main_container.pack_forget()
 
-
+    def mostrar_dashboard(self):
+        self.limpiar_subframe()
+        self.main_container.pack(side=TOP, anchor=N, pady=50)  # <-- fuerza que se muestre arriba
