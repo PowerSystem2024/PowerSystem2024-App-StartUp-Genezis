@@ -160,7 +160,9 @@ class MedicosDashboard(tk.Frame):
                 "¿Está seguro que desea eliminar el médico seleccionado?"
         ):
             try:
-                medico_id_to_delete = self.tree.item(seleccion[0], "iid")
+                # CORRECCIÓN: Usar "values" en lugar de "id"
+                valores = self.tree.item(seleccion[0], "values")
+                medico_id_to_delete = valores[0]  # El ID está en la primera posición
 
                 inst_controller.eliminarMedico(medico_id_to_delete)
                 self.cargar_datos()
