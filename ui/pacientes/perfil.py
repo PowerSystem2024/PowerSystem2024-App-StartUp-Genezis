@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import messagebox
 
+
 class PerfilFrame(Frame):
     def __init__(self, parent, paciente_id=None, volver_callback=None):
         super().__init__(parent)
@@ -23,10 +24,20 @@ class PerfilFrame(Frame):
             "Última Modificación": StringVar(),
         }
 
-        # Etiquetas y campos de entrada
+        # Etiquetas y campos de entrada con campos de solo lectura
+        self.entries = {}
+
         for idx, (label, var) in enumerate(self.campos.items()):
             Label(self, text=label + ":").grid(row=idx + 1, column=0, sticky=E, padx=5, pady=2)
-            Entry(self, textvariable=var, width=40).grid(row=idx + 1, column=1, sticky=W, padx=5, pady=2)
+            entry = Entry(self, textvariable=var, width=40)
+
+            # Desactivar los campos de solo lectura
+            if label in ["ID", "Fecha de Creación", "Última Modificación"]:
+                entry.config(state=DISABLED)
+
+            entry.grid(row=idx + 1, column=1, sticky=W, padx=5, pady=2)
+            self.entries[label] = entry
+
 
         # Botón para guardar cambios
         Button(self, text="Guardar Cambios", command=self.guardar_cambios).grid(
