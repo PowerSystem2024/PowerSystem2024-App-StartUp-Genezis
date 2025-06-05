@@ -2,7 +2,7 @@
 
 from database.db_manager import DatabaseManager
 from utils.date_utils import fecha_hora_actual_utc
-from controllers import med_controller  # Importamos el controlador de médicos
+from controllers import med_controller
 
 
 class AdminController:
@@ -50,22 +50,49 @@ class AdminController:
     # ====================================
 
     def get_system_stats(self):
-        usuarios = self.get_all_users()
-        instituciones = self.get_all_institutions()
-        medicos = self.db.fetch_all("medicos")
-        pacientes = self.db.fetch_all("pacientes")
+        """
+        Obtiene estadísticas del sistema contando correctamente por tipos de usuario
+        """
+        usuarios_result = self.get_all_users()
+
+        if not usuarios_result or not usuarios_result.data:
+            return {
+                "usuarios_totales": 0,
+                "instituciones_totales": 0,
+                "medicos_totales": 0,
+                "pacientes_totales": 0,
+                "turnos_totales": 0,
+            }
+
+        usuarios = usuarios_result.data
+
+        # Contar por tipo de usuario
+        tipos_count = {
+            "medico": 0,
+            "paciente": 0,
+            "institucion": 0,
+            "admin": 0
+        }
+
+        for usuario in usuarios:
+            tipo = usuario.get("tipo", "").lower()
+            if tipo in tipos_count:
+                tipos_count[tipo] += 1
+
+        # Obtener turnos totales (esto sí es independiente)
         turnos = self.db.fetch_all("turnos")
+        turnos_total = len(turnos.data) if turnos and turnos.data else 0
 
         return {
-            "usuarios_totales": len(usuarios.data),
-            "instituciones_totales": len(instituciones.data),
-            "medicos_totales": len(medicos.data),
-            "pacientes_totales": len(pacientes.data),
-            "turnos_totales": len(turnos.data),
+            "usuarios_totales": len(usuarios),
+            "instituciones_totales": tipos_count["institucion"],
+            "medicos_totales": tipos_count["medico"],
+            "pacientes_totales": tipos_count["paciente"],
+            "turnos_totales": turnos_total,
         }
 
     # ====================================
-    # INFO EXTENDIDA POR USUARIO
+    # INFO USUARIO
     # ====================================
 
     def get_medico_id_by_user_id(self, user_id):
@@ -142,10 +169,11 @@ class AdminController:
 
                 if user_data:
                     nombre = user_data.get("nombre", "Sin nombre")
+                    apellido = user_data.get("apellido", "Sin apellido")  # ← ACA SE AGREGUA EL APELLIDO
                     email = user_data.get("email", "Sin email")
 
-                    # Formatear información del paciente
-                    paciente_info = f"{nombre} ({email})"
+                    # Formatear información del paciente CON NOMBRE COMPLETO
+                    paciente_info = f"{nombre} {apellido} ({email})"  # ← AQUÍ USO NOMBRE Y APELLIDO
 
                     # Agregar información adicional si está disponible
                     if paciente.get("telefono"):
@@ -200,7 +228,7 @@ class AdminController:
         institucion_info = self.db.fetch_by_id("instituciones", medico_data.get("institucion_id"))
         institucion_nombre = "Sin institución"
         if institucion_info and institucion_info.data:
-            # Manejar si data es una lista o un diccionario
+
             if isinstance(institucion_info.data, list) and len(institucion_info.data) > 0:
                 institucion_nombre = institucion_info.data[0].get("nombre", "Sin nombre")
             elif isinstance(institucion_info.data, dict):

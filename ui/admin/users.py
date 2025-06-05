@@ -107,40 +107,74 @@ class UsersFrame(tk.Frame):
     def open_user_form(self, user_id=None, user_data=None):
         form = tk.Toplevel(self)
         form.title("Formulario de Usuario")
-        form.geometry("300x250")
+        form.geometry("350x350")
 
+        # Campos del formulario
         tk.Label(form, text="Nombre").pack(pady=5)
         entry_nombre = tk.Entry(form)
         entry_nombre.pack()
+
+        tk.Label(form, text="Apellido").pack(pady=5)
+        entry_apellido = tk.Entry(form)
+        entry_apellido.pack()
 
         tk.Label(form, text="Email").pack(pady=5)
         entry_email = tk.Entry(form)
         entry_email.pack()
 
+        tk.Label(form, text="Contraseña").pack(pady=5)
+        entry_password = tk.Entry(form, show="*")
+        entry_password.pack()
+
         tk.Label(form, text="Tipo").pack(pady=5)
         tipo_var = tk.StringVar()
-        tipo_combobox = ttk.Combobox(form, textvariable=tipo_var, values=["paciente", "medico", "institucion", "admin"])
+        tipo_combobox = ttk.Combobox(
+            form,
+            textvariable=tipo_var,
+            values=["paciente", "medico", "institucion", "admin"],
+            state="readonly"
+        )
         tipo_combobox.pack()
 
+        # Prellenar campos si es edición
         if user_data:
-            entry_nombre.insert(0, user_data["nombre"])
-            entry_email.insert(0, user_data["email"])
-            tipo_var.set(user_data["tipo"])
+            entry_nombre.insert(0, user_data.get("nombre", ""))
+            entry_apellido.insert(0, user_data.get("apellido", ""))
+            entry_email.insert(0, user_data.get("email", ""))
+            tipo_var.set(user_data.get("tipo", ""))
+            entry_password.configure(state="disabled")  # No permitir cambio de contraseña en edición
 
         def submit():
+            nombre = entry_nombre.get().strip()
+            apellido = entry_apellido.get().strip()
+            email = entry_email.get().strip()
+            tipo = tipo_var.get().strip()
+
+            if not all([nombre, apellido, email, tipo]):
+                messagebox.showwarning("Datos incompletos", "Por favor completa todos los campos obligatorios.")
+                return
+
             data = {
-                "nombre": entry_nombre.get(),
-                "email": entry_email.get(),
-                "tipo": tipo_var.get()
+                "nombre": nombre,
+                "apellido": apellido,
+                "email": email,
+                "tipo": tipo,
             }
+
             if user_id:
                 self.controller.update_user(user_id, data)
             else:
+                password = entry_password.get().strip()
+                if not password:
+                    messagebox.showwarning("Datos incompletos", "La contraseña es obligatoria para crear el usuario.")
+                    return
+                data["password"] = password
                 self.controller.create_user(data)
+
             form.destroy()
             self.load_users()
 
-        tk.Button(form, text="Guardar", command=submit).pack(pady=10)
+        tk.Button(form, text="Guardar", command=submit).pack(pady=15)
 
     # ==========================
     # Sección: Vista de detalle por usuario (mejorada)
