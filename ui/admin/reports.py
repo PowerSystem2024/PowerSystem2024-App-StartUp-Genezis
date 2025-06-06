@@ -1,4 +1,4 @@
-# ui/admin/reports.py - Versión corregida y simplificada
+# ui/admin/reports.py
 
 import tkinter as tk
 from tkinter import ttk
@@ -10,239 +10,152 @@ class ReportsFrame(tk.Frame):
         self.controller = controller
         self.setup_ui()
 
-    # ===========================================
-    # CONFIGURACIÓN DE LA INTERFAZ
-    # ===========================================
-
     def setup_ui(self):
-        """Configura la interfaz de usuario"""
-        self._create_title()
-        self._create_stats_cards()
+        # Título
+        tk.Label(self, text="Reportes y Estadísticas",
+                 font=("Arial", 14, "bold")).pack(pady=10)
+
+        # Estadísticas principales
+        self._create_stats_section()
+
+        # Tabla resumen
         self._create_summary_table()
 
-    def _create_title(self):
-        """Crea el título principal"""
-        title_frame = tk.Frame(self, bg='white')
-        title_frame.pack(fill=tk.X, pady=(0, 20))
+    def _create_stats_section(self):
+        stats_frame = tk.LabelFrame(self, text="Estadísticas", font=("Arial", 10, "bold"))
+        stats_frame.pack(fill=tk.X, padx=20, pady=10)
 
-        tk.Label(title_frame,
-                 text="📊 Reportes y Estadísticas",
-                 font=("Arial", 14, "bold"),
-                 fg="#2c3e50",
-                 bg='white').pack(pady=15)
+        stats = self._get_stats()
 
-    def _create_stats_cards(self):
-        """Crea las tarjetas de estadísticas principales"""
-        cards_frame = tk.Frame(self, bg='white')
-        cards_frame.pack(fill=tk.X, pady=(0, 20), padx=20)
-
-        # Obtener estadísticas corregidas
-        stats = self._get_corrected_stats()
-
-        # Configurar tarjetas
-        cards_config = [
-            ("👥", "Usuarios Totales", stats["usuarios_totales"], "#3498db"),
-            ("👨‍⚕️", "Médicos", stats["medicos"], "#27ae60"),
-            ("🤒", "Pacientes", stats["pacientes"], "#e74c3c"),
-            ("🏥", "Instituciones", stats["instituciones"], "#f39c12"),
-            ("👨‍💼", "Administradores", stats["admins"], "#9b59b6")
+        # Grid de estadísticas (2 columnas)
+        stats_data = [
+            ("Usuarios Totales", stats["usuarios_totales"]),
+            ("Médicos", stats["medicos"]),
+            ("Pacientes", stats["pacientes"]),
+            ("Instituciones", stats["instituciones"]),
+            ("Administradores", stats["admins"])
         ]
 
-        # Crear grid de tarjetas (3 columnas)
-        for i, (icon, title, value, color) in enumerate(cards_config):
-            row = i // 3
-            col = i % 3
-            self._create_stat_card(cards_frame, icon, title, value, color, row, col)
+        for i, (label, value) in enumerate(stats_data):
+            row, col = divmod(i, 2)
 
-    def _create_stat_card(self, parent, icon, title, value, color, row, col):
-        """Crea una tarjeta individual de estadística"""
-        card = tk.Frame(parent, bg=color, relief='flat', bd=1)
-        card.grid(row=row, column=col, padx=10, pady=10, sticky='ew', ipadx=15, ipady=10)
+            item_frame = tk.Frame(stats_frame)
+            item_frame.grid(row=row, column=col, padx=10, pady=5, sticky="w")
+
+            tk.Label(item_frame, text=f"{label}:", font=("Arial", 9)).pack(side=tk.LEFT)
+            tk.Label(item_frame, text=str(value), font=("Arial", 9, "bold")).pack(side=tk.LEFT, padx=(5, 0))
 
         # Configurar expansión de columnas
-        parent.grid_columnconfigure(col, weight=1)
-
-        # Contenido de la tarjeta
-        tk.Label(card, text=icon, font=("Arial", 20), fg='white', bg=color).pack()
-        tk.Label(card, text=str(value), font=("Arial", 16, "bold"), fg='white', bg=color).pack()
-        tk.Label(card, text=title, font=("Arial", 10), fg='white', bg=color).pack()
+        stats_frame.grid_columnconfigure(0, weight=1)
+        stats_frame.grid_columnconfigure(1, weight=1)
 
     def _create_summary_table(self):
-        """Crea la tabla resumen"""
-        # Frame contenedor
-        table_frame = tk.LabelFrame(self,
-                                    text="📋 Resumen por Tipo de Usuario",
-                                    font=("Arial", 12, "bold"),
-                                    fg="#2c3e50",
-                                    bg='white')
+        table_frame = tk.LabelFrame(self, text="Resumen por Tipo", font=("Arial", 10, "bold"))
         table_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
 
-        # Crear tabla
+        # Tabla
         columns = ("tipo", "cantidad", "porcentaje")
-        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=6)
+        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=5)
 
-        # Configurar columnas
-        self.tree.heading("tipo", text="Tipo de Usuario")
-        self.tree.heading("cantidad", text="Cantidad")
-        self.tree.heading("porcentaje", text="Porcentaje")
+        for col, text, width in [("tipo", "Tipo", 150), ("cantidad", "Cantidad", 80), ("porcentaje", "Porcentaje", 80)]:
+            self.tree.heading(col, text=text)
+            self.tree.column(col, width=width, anchor='center' if col != 'tipo' else 'w')
 
-        self.tree.column("tipo", width=200, anchor='w')
-        self.tree.column("cantidad", width=100, anchor='center')
-        self.tree.column("porcentaje", width=120, anchor='center')
+        self._fill_table()
+        self.tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        # Llenar tabla
-        self._populate_summary_table()
+        # Análisis simple
+        self._create_analysis(table_frame)
 
-        # Empaquetar tabla
-        self.tree.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
-
-        # Crear análisis rápido
-        self._create_quick_analysis(table_frame)
-
-    # ===========================================
-    #  MANEJO DE DATOS
-    # ===========================================
-
-    def _get_corrected_stats(self):
-        """Obtiene estadísticas correctas contando por tipo de usuario"""
-        result = self.controller.get_all_users()
-
-        if not result or not result.data:
-            return {
-                "usuarios_totales": 0,
-                "medicos": 0,
-                "pacientes": 0,
-                "instituciones": 0,
-                "admins": 0
-            }
-
-        # Contar por tipo de usuario
-        usuarios = result.data
-        tipos_count = {"medico": 0, "paciente": 0, "institucion": 0, "admin": 0}
-
-        for usuario in usuarios:
-            tipo = usuario.get("tipo", "").lower()
-            if tipo in tipos_count:
-                tipos_count[tipo] += 1
-
-        return {
-            "usuarios_totales": len(usuarios),
-            "medicos": tipos_count["medico"],
-            "pacientes": tipos_count["paciente"],
-            "instituciones": tipos_count["institucion"],
-            "admins": tipos_count["admin"]
-        }
-
-    def _populate_summary_table(self):
-        """Llena la tabla con datos estadísticos"""
-        stats = self._get_corrected_stats()
+    def _fill_table(self):
+        stats = self._get_stats()
         total = stats["usuarios_totales"]
 
-        # Limpiar tabla
         self.tree.delete(*self.tree.get_children())
 
-        # Datos para la tabla
-        data = [
-            ("👨‍⚕️ Médicos", stats["medicos"]),
-            ("🤒 Pacientes", stats["pacientes"]),
-            ("🏥 Instituciones", stats["instituciones"]),
-            ("👨‍💼 Administradores", stats["admins"])
+        table_data = [
+            ("Médicos", stats["medicos"]),
+            ("Pacientes", stats["pacientes"]),
+            ("Instituciones", stats["instituciones"]),
+            ("Administradores", stats["admins"])
         ]
 
-        # Insertar filas
-        for tipo, cantidad in data:
+        for tipo, cantidad in table_data:
             porcentaje = f"{(cantidad / total * 100):.1f}%" if total > 0 else "0%"
             self.tree.insert("", "end", values=(tipo, cantidad, porcentaje))
 
-    def _create_quick_analysis(self, parent):
-        """Crea una sección de análisis rápido"""
-        analysis_frame = tk.Frame(parent, bg='#f8f9fa', relief='solid', bd=1)
-        analysis_frame.pack(fill=tk.X, padx=15, pady=(0, 15))
+    def _create_analysis(self, parent):
+        analysis_frame = tk.Frame(parent, relief='solid', bd=1, bg='#f5f5f5')
+        analysis_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
 
-        # Título
-        tk.Label(analysis_frame,
-                 text="🔍 Análisis Rápido",
-                 font=("Arial", 11, "bold"),
-                 fg="#2c3e50",
-                 bg='#f8f9fa').pack(anchor='w', padx=15, pady=(10, 5))
+        tk.Label(analysis_frame, text="Análisis:", font=("Arial", 9, "bold"),
+                 bg='#f5f5f5').pack(anchor='w', padx=10, pady=(5, 0))
 
-        # Generar y mostrar análisis
-        analysis_points = self._generate_quick_analysis()
-
+        analysis_points = self._generate_analysis()
         for point in analysis_points:
-            tk.Label(analysis_frame,
-                     text=f"• {point}",
-                     font=("Arial", 9),
-                     fg="#2c3e50",
-                     bg='#f8f9fa',
-                     anchor='w',
-                     justify='left').pack(fill=tk.X, padx=15, pady=1)
+            tk.Label(analysis_frame, text=f"• {point}", font=("Arial", 8),
+                     bg='#f5f5f5', anchor='w').pack(fill=tk.X, padx=15, pady=1)
 
-        # Espaciado inferior
-        tk.Label(analysis_frame, text="", bg='#f8f9fa').pack(pady=5)
+        tk.Frame(analysis_frame, height=5, bg='#f5f5f5').pack()
 
-    # ===========================================
-    # BLOQUE 3: ANÁLISIS DE DATOS
-    # ===========================================
+    def _get_stats(self):
+        result = self.controller.get_all_users()
 
-    def _generate_quick_analysis(self):
-        """Genera puntos de análisis rápido"""
-        stats = self._get_corrected_stats()
+        if not (result and result.data):
+            return {"usuarios_totales": 0, "medicos": 0, "pacientes": 0, "instituciones": 0, "admins": 0}
+
+        usuarios = result.data
+        counts = {"medico": 0, "paciente": 0, "institucion": 0, "admin": 0}
+
+        for usuario in usuarios:
+            tipo = usuario.get("tipo", "").lower()
+            if tipo in counts:
+                counts[tipo] += 1
+
+        return {
+            "usuarios_totales": len(usuarios),
+            "medicos": counts["medico"],
+            "pacientes": counts["paciente"],
+            "instituciones": counts["institucion"],
+            "admins": counts["admin"]
+        }
+
+    def _generate_analysis(self):
+        stats = self._get_stats()
         analysis = []
 
         total = stats["usuarios_totales"]
         medicos = stats["medicos"]
         pacientes = stats["pacientes"]
         instituciones = stats["instituciones"]
-        admins = stats["admins"]
 
-        # Análisis general del sistema
+        # Análisis básico
         if total == 0:
-            analysis.append("Sistema sin usuarios registrados")
-        elif total < 10:
-            analysis.append("Sistema en fase inicial (menos de 10 usuarios)")
-        else:
-            analysis.append(f"Sistema activo con {total} usuarios registrados")
+            return ["Sistema sin usuarios registrados"]
 
-        # Análisis de distribución
+        if total < 10:
+            analysis.append(f"Sistema inicial ({total} usuarios)")
+        else:
+            analysis.append(f"Sistema activo ({total} usuarios)")
+
+        # Ratio médicos-pacientes
         if medicos > 0 and pacientes > 0:
             ratio = round(pacientes / medicos, 1)
-            if ratio < 5:
-                analysis.append(f"Ratio pacientes/médicos: {ratio}:1 (Excelente cobertura)")
-            elif ratio < 15:
-                analysis.append(f"Ratio pacientes/médicos: {ratio}:1 (Buena cobertura)")
+            if ratio < 10:
+                analysis.append(f"Ratio P/M: {ratio}:1 (Buena cobertura)")
             else:
-                analysis.append(f"Ratio pacientes/médicos: {ratio}:1 (Considerar más médicos)")
-        elif medicos == 0 and pacientes > 0:
-            analysis.append("Hay pacientes registrados pero no médicos")
-        elif medicos > 0 and pacientes == 0:
-            analysis.append("Hay médicos registrados pero no pacientes")
+                analysis.append(f"Ratio P/M: {ratio}:1 (Considerar más médicos)")
+        elif pacientes > 0 and medicos == 0:
+            analysis.append("Pacientes sin médicos disponibles")
 
-        # Análisis de instituciones
+        # Instituciones
         if instituciones > 0 and medicos > 0:
             med_por_inst = round(medicos / instituciones, 1)
-            analysis.append(f"Promedio de {med_por_inst} médicos por institución")
-        elif instituciones == 0 and medicos > 0:
-            analysis.append("Médicos registrados sin instituciones asociadas")
+            analysis.append(f"Promedio: {med_por_inst} médicos/institución")
 
-        # Análisis de administración
-        if admins == 0:
-            analysis.append("⚠️ No hay administradores además del actual")
-        elif admins == 1:
-            analysis.append("Sistema con un solo administrador")
-
-        # Si no hay suficientes datos
-        if len(analysis) == 0:
-            analysis.append("Datos insuficientes para análisis")
-
-        return analysis[:5]  # Máximo 5 puntos
-
-    # ===========================================
-    #  FUNCIONES AUXILIARES
-    # ===========================================
+        return analysis[:3]  # Máximo 3 puntos
 
     def refresh_data(self):
-        """Refresca todos los datos mostrados"""
         for widget in self.winfo_children():
             widget.destroy()
         self.setup_ui()

@@ -4,9 +4,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 
-# ==========================
-# Clase: UsersFrame (Interfaz de Gestión de Usuarios)
-# ==========================
 class UsersFrame(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -15,67 +12,55 @@ class UsersFrame(tk.Frame):
         self.setup_ui()
         self.load_users()
 
-    # ==========================
-    # Sección: Configuración de la interfaz
-    # ==========================
     def setup_ui(self):
-        title = tk.Label(self, text="Gestión de Usuarios", font=("Arial", 14, "bold"))
-        title.pack(pady=10)
+        # Título
+        tk.Label(self, text="Gestión de Usuarios", font=("Arial", 14, "bold")).pack(pady=10)
 
-        # Filtro por tipo de usuario
+        # Filtro
         filtro_frame = tk.Frame(self)
         filtro_frame.pack()
         tk.Label(filtro_frame, text="Filtrar por tipo:").pack(side=tk.LEFT, padx=5)
-        tipo_combobox = ttk.Combobox(
-            filtro_frame,
-            textvariable=self.tipo_usuario_filtro,
-            values=["todos", "paciente", "medico", "institucion", "admin"],
-            state="readonly",
-            width=15
-        )
-        tipo_combobox.pack(side=tk.LEFT)
-        tipo_combobox.bind("<<ComboboxSelected>>", lambda e: self.load_users())
 
-        # Tabla de usuarios (sin ID visible)
+        tipo_combo = ttk.Combobox(
+            filtro_frame, textvariable=self.tipo_usuario_filtro,
+            values=["todos", "paciente", "medico", "institucion", "admin"],
+            state="readonly", width=15
+        )
+        tipo_combo.pack(side=tk.LEFT)
+        tipo_combo.bind("<<ComboboxSelected>>", lambda e: self.load_users())
+
+        # Tabla
         self.tree = ttk.Treeview(self, columns=("nombre", "email", "tipo"), show="headings")
-        self.tree.heading("nombre", text="Nombre")
-        self.tree.heading("email", text="Email")
-        self.tree.heading("tipo", text="Tipo")
-        self.tree.bind("<Double-1>", self.show_user_detail)  # Doble clic para detalles
+        for col, text in [("nombre", "Nombre"), ("email", "Email"), ("tipo", "Tipo")]:
+            self.tree.heading(col, text=text)
+
+        self.tree.bind("<Double-1>", self.show_user_detail)
         self.tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # Botones de acción
-        button_frame = tk.Frame(self)
-        button_frame.pack(pady=10)
-        tk.Button(button_frame, text="Crear Usuario", command=self.create_user).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Editar Usuario", command=self.edit_user).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Eliminar Usuario", command=self.delete_user).pack(side=tk.LEFT, padx=5)
+        # Botones
+        btn_frame = tk.Frame(self)
+        btn_frame.pack(pady=10)
 
-    # ==========================
-    # Sección: Operaciones con la tabla
-    # ==========================
+        for text, cmd in [("Crear Usuario", self.create_user),
+                          ("Editar Usuario", self.edit_user),
+                          ("Eliminar Usuario", self.delete_user)]:
+            tk.Button(btn_frame, text=text, command=cmd).pack(side=tk.LEFT, padx=5)
+
     def load_users(self):
         self.tree.delete(*self.tree.get_children())
         result = self.controller.get_all_users()
+
         if result and result.data:
-            tipo = self.tipo_usuario_filtro.get()
+            tipo_filtro = self.tipo_usuario_filtro.get()
             for user in result.data:
-                if tipo == "todos" or user.get("tipo") == tipo:
-                    self.tree.insert("", "end", values=(
-                        user.get("nombre"),
-                        user.get("email"),
-                        user.get("tipo")
-                    ), tags=(user.get("id"),))  # ID oculto en tag
+                if tipo_filtro == "todos" or user.get("tipo") == tipo_filtro:
+                    values = (user.get("nombre"), user.get("email"), user.get("tipo"))
+                    self.tree.insert("", "end", values=values, tags=(user.get("id"),))
 
     def get_selected_user_id(self):
         selected = self.tree.selection()
-        if not selected:
-            return None
-        return self.tree.item(selected[0])["tags"][0]
+        return self.tree.item(selected[0])["tags"][0] if selected else None
 
-    # ==========================
-    # Sección: CRUD
-    # ==========================
     def create_user(self):
         self.open_user_form()
 
@@ -86,11 +71,7 @@ class UsersFrame(tk.Frame):
             return
 
         values = self.tree.item(self.tree.selection()[0])["values"]
-        user_data = {
-            "nombre": values[0],
-            "email": values[1],
-            "tipo": values[2]
-        }
+        user_data = dict(zip(["nombre", "email", "tipo"], values))
         self.open_user_form(user_id, user_data)
 
     def delete_user(self):
@@ -99,76 +80,64 @@ class UsersFrame(tk.Frame):
             messagebox.showwarning("Aviso", "Selecciona un usuario para eliminar.")
             return
 
-        confirm = messagebox.askyesno("Confirmar", "¿Estás seguro de que deseas eliminar este usuario?")
-        if confirm:
+        if messagebox.askyesno("Confirmar", "¿Eliminar este usuario?"):
             self.controller.delete_user(user_id)
             self.load_users()
 
     def open_user_form(self, user_id=None, user_data=None):
         form = tk.Toplevel(self)
-        form.title("Formulario de Usuario")
-        form.geometry("350x350")
+        form.title("Usuario")
+        form.geometry("300x280")
 
-        # Campos del formulario
-        tk.Label(form, text="Nombre").pack(pady=5)
-        entry_nombre = tk.Entry(form)
-        entry_nombre.pack()
+        # Campos
+        fields = {}
+        field_configs = [
+            ("nombre", "Nombre", False),
+            ("apellido", "Apellido", False),
+            ("email", "Email", False),
+            ("password", "Contraseña", True)
+        ]
 
-        tk.Label(form, text="Apellido").pack(pady=5)
-        entry_apellido = tk.Entry(form)
-        entry_apellido.pack()
+        for field, label, is_password in field_configs:
+            tk.Label(form, text=label).pack(pady=2)
+            entry = tk.Entry(form, show="*" if is_password else "")
+            entry.pack(pady=2)
+            fields[field] = entry
 
-        tk.Label(form, text="Email").pack(pady=5)
-        entry_email = tk.Entry(form)
-        entry_email.pack()
-
-        tk.Label(form, text="Contraseña").pack(pady=5)
-        entry_password = tk.Entry(form, show="*")
-        entry_password.pack()
-
-        tk.Label(form, text="Tipo").pack(pady=5)
+        # Tipo de usuario
+        tk.Label(form, text="Tipo").pack(pady=2)
         tipo_var = tk.StringVar()
-        tipo_combobox = ttk.Combobox(
-            form,
-            textvariable=tipo_var,
+        tipo_combo = ttk.Combobox(
+            form, textvariable=tipo_var,
             values=["paciente", "medico", "institucion", "admin"],
             state="readonly"
         )
-        tipo_combobox.pack()
+        tipo_combo.pack(pady=2)
 
-        # Prellenar campos si es edición
+        # Prellenar si es edición
         if user_data:
-            entry_nombre.insert(0, user_data.get("nombre", ""))
-            entry_apellido.insert(0, user_data.get("apellido", ""))
-            entry_email.insert(0, user_data.get("email", ""))
+            for field in ["nombre", "apellido", "email"]:
+                if field in fields:
+                    fields[field].insert(0, user_data.get(field, ""))
             tipo_var.set(user_data.get("tipo", ""))
-            entry_password.configure(state="disabled")  # No permitir cambio de contraseña en edición
+            fields["password"].configure(state="disabled")
 
         def submit():
-            nombre = entry_nombre.get().strip()
-            apellido = entry_apellido.get().strip()
-            email = entry_email.get().strip()
-            tipo = tipo_var.get().strip()
+            data = {field: entry.get().strip() for field, entry in fields.items()}
+            data["tipo"] = tipo_var.get().strip()
 
-            if not all([nombre, apellido, email, tipo]):
-                messagebox.showwarning("Datos incompletos", "Por favor completa todos los campos obligatorios.")
+            required = ["nombre", "apellido", "email", "tipo"]
+            if not user_id:
+                required.append("password")
+
+            if not all(data.get(field) for field in required):
+                messagebox.showwarning("Error", "Completa todos los campos obligatorios.")
                 return
 
-            data = {
-                "nombre": nombre,
-                "apellido": apellido,
-                "email": email,
-                "tipo": tipo,
-            }
-
             if user_id:
+                del data["password"]  # No enviar password en edición
                 self.controller.update_user(user_id, data)
             else:
-                password = entry_password.get().strip()
-                if not password:
-                    messagebox.showwarning("Datos incompletos", "La contraseña es obligatoria para crear el usuario.")
-                    return
-                data["password"] = password
                 self.controller.create_user(data)
 
             form.destroy()
@@ -176,174 +145,114 @@ class UsersFrame(tk.Frame):
 
         tk.Button(form, text="Guardar", command=submit).pack(pady=15)
 
-    # ==========================
-    # Sección: Vista de detalle por usuario (mejorada)
-    # ==========================
     def show_user_detail(self, event=None):
         selected = self.tree.selection()
         if not selected:
             return
+
         values = self.tree.item(selected[0])["values"]
         user_id = self.tree.item(selected[0])["tags"][0]
         user_tipo = values[2]
 
         detail = tk.Toplevel(self)
         detail.title("Detalles del Usuario")
-        detail.geometry("600x500")
-        detail.configure(bg="white")
+        detail.geometry("500x400")
 
-        # Frame principal con scroll
-        main_frame = tk.Frame(detail, bg="white")
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        # Información básica
+        info_frame = tk.LabelFrame(detail, text="Información Básica", font=("Arial", 10, "bold"))
+        info_frame.pack(fill=tk.X, padx=10, pady=5)
 
-        # Información básica del usuario
-        info_frame = tk.LabelFrame(main_frame, text="Información Básica", font=("Arial", 12, "bold"), bg="white")
-        info_frame.pack(fill=tk.X, pady=(0, 20))
+        for label, value in [("Nombre", values[0]), ("Email", values[1]), ("Tipo", values[2].capitalize())]:
+            tk.Label(info_frame, text=f"{label}: {value}", anchor="w").pack(fill=tk.X, padx=5, pady=1)
 
-        tk.Label(info_frame, text=f"Nombre: {values[0]}", font=("Arial", 11), bg="white", anchor="w").pack(fill=tk.X,
-                                                                                                           padx=10,
-                                                                                                           pady=2)
-        tk.Label(info_frame, text=f"Email: {values[1]}", font=("Arial", 11), bg="white", anchor="w").pack(fill=tk.X,
-                                                                                                          padx=10,
-                                                                                                          pady=2)
-        tk.Label(info_frame, text=f"Tipo: {values[2].capitalize()}", font=("Arial", 11), bg="white", anchor="w").pack(
-            fill=tk.X, padx=10, pady=2)
+        # Información específica según tipo
+        content_frame = tk.Frame(detail)
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        # Información específica según el tipo de usuario
         if user_tipo == "medico":
-            self.show_medico_details(main_frame, user_id)
+            self.show_medico_details(content_frame, user_id)
         elif user_tipo == "paciente":
-            self.show_paciente_details(main_frame, user_id)
+            self.show_paciente_details(content_frame, user_id)
         elif user_tipo == "institucion":
-            self.show_institucion_details(main_frame, user_id)
+            self.show_institucion_details(content_frame, user_id)
 
     def show_medico_details(self, parent, user_id):
-        """Muestra detalles específicos de un médico"""
         medico_info = self.controller.get_medico_full_info(user_id)
-
         if not medico_info:
-            tk.Label(parent, text="No se encontró información adicional del médico",
-                     font=("Arial", 10), fg="red", bg="white").pack(pady=10)
+            tk.Label(parent, text="Sin información adicional", fg="gray").pack(pady=10)
             return
 
-        # Información profesional
-        prof_frame = tk.LabelFrame(parent, text="Información Profesional", font=("Arial", 12, "bold"), bg="white")
-        prof_frame.pack(fill=tk.X, pady=(0, 15))
+        # Info profesional
+        prof_frame = tk.LabelFrame(parent, text="Información Profesional")
+        prof_frame.pack(fill=tk.X, pady=5)
 
-        tk.Label(prof_frame, text=f"Especialidad: {medico_info['especialidad']}",
-                 font=("Arial", 11), bg="white", anchor="w").pack(fill=tk.X, padx=10, pady=2)
-        tk.Label(prof_frame, text=f"Matrícula: {medico_info['matricula']}",
-                 font=("Arial", 11), bg="white", anchor="w").pack(fill=tk.X, padx=10, pady=2)
-        tk.Label(prof_frame, text=f"Institución: {medico_info['institucion']}",
-                 font=("Arial", 11), bg="white", anchor="w").pack(fill=tk.X, padx=10, pady=2)
-        tk.Label(prof_frame, text=f"Duración de turno: {medico_info['duracion_turno']}",
-                 font=("Arial", 11), bg="white", anchor="w").pack(fill=tk.X, padx=10, pady=2)
+        prof_data = [
+            ("Especialidad", medico_info.get('especialidad')),
+            ("Matrícula", medico_info.get('matricula')),
+            ("Institución", medico_info.get('institucion')),
+            ("Duración turno", medico_info.get('duracion_turno'))
+        ]
 
-        # Horarios disponibles
-        horarios_frame = tk.LabelFrame(parent, text="Horarios Disponibles", font=("Arial", 12, "bold"), bg="white")
-        horarios_frame.pack(fill=tk.X, pady=(0, 15))
+        for label, value in prof_data:
+            if value:
+                tk.Label(prof_frame, text=f"{label}: {value}", anchor="w").pack(fill=tk.X, padx=5, pady=1)
 
-        if medico_info['horarios']:
-            for horario in medico_info['horarios']:
-                tk.Label(horarios_frame, text=f"• {horario}",
-                         font=("Arial", 10), bg="white", anchor="w").pack(fill=tk.X, padx=15, pady=1)
-        else:
-            tk.Label(horarios_frame, text="No hay horarios configurados",
-                     font=("Arial", 10), fg="gray", bg="white").pack(padx=10, pady=5)
+        # Horarios (simplificado)
+        if medico_info.get('horarios'):
+            horarios_frame = tk.LabelFrame(parent, text="Horarios")
+            horarios_frame.pack(fill=tk.X, pady=5)
 
-        # Pacientes atendidos
-        pacientes_frame = tk.LabelFrame(parent, text=f"Pacientes Atendidos ({medico_info['total_pacientes']})",
-                                        font=("Arial", 12, "bold"), bg="white")
-        pacientes_frame.pack(fill=tk.BOTH, expand=True)
+            horarios_text = ", ".join(medico_info['horarios'][:3])  # Solo primeros 3
+            if len(medico_info['horarios']) > 3:
+                horarios_text += f" (+{len(medico_info['horarios']) - 3} más)"
 
-        # Frame con scroll para la lista de pacientes
-        canvas = tk.Canvas(pacientes_frame, bg="white", height=150)
-        scrollbar = ttk.Scrollbar(pacientes_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, bg="white")
+            tk.Label(horarios_frame, text=horarios_text, wraplength=400).pack(padx=5, pady=5)
 
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
+        # Pacientes (simplificado)
+        total_pacientes = medico_info.get('total_pacientes', 0)
+        if total_pacientes > 0:
+            pacientes_frame = tk.LabelFrame(parent, text=f"Pacientes Atendidos ({total_pacientes})")
+            pacientes_frame.pack(fill=tk.X, pady=5)
 
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
+            if medico_info.get('pacientes'):
+                # Mostrar solo los primeros 5
+                pacientes_muestra = medico_info['pacientes'][:5]
+                for paciente in pacientes_muestra:
+                    tk.Label(pacientes_frame, text=f"• {paciente}", anchor="w").pack(fill=tk.X, padx=10, pady=1)
 
-        if medico_info['pacientes']:
-            for i, paciente in enumerate(medico_info['pacientes'], 1):
-                tk.Label(scrollable_frame, text=f"{i}. {paciente}",
-                         font=("Arial", 10), bg="white", anchor="w").pack(fill=tk.X, padx=10, pady=1)
-        else:
-            tk.Label(scrollable_frame, text="No ha atendido pacientes aún",
-                     font=("Arial", 10), fg="gray", bg="white").pack(padx=10, pady=20)
-
-        canvas.pack(side="left", fill="both", expand=True, padx=10, pady=5)
-        scrollbar.pack(side="right", fill="y", pady=5)
+                if len(medico_info['pacientes']) > 5:
+                    tk.Label(pacientes_frame, text=f"... y {len(medico_info['pacientes']) - 5} más",
+                             fg="gray", anchor="w").pack(fill=tk.X, padx=10)
 
     def show_paciente_details(self, parent, user_id):
-        """Muestra detalles específicos de un paciente"""
-        paciente_info = self.controller.get_info_paciente(user_id)
-
-        if paciente_info and paciente_info.data:
-            # Manejar si data es una lista o un diccionario
-            if isinstance(paciente_info.data, list) and len(paciente_info.data) > 0:
-                data = paciente_info.data[0]
-            elif isinstance(paciente_info.data, dict):
-                data = paciente_info.data
-            else:
-                data = None
-
-            if data:
-                info_frame = tk.LabelFrame(parent, text="Información del Paciente", font=("Arial", 12, "bold"),
-                                           bg="white")
-                info_frame.pack(fill=tk.X, pady=(0, 15))
-
-                if data.get("telefono"):
-                    tk.Label(info_frame, text=f"Teléfono: {data['telefono']}",
-                             font=("Arial", 11), bg="white", anchor="w").pack(fill=tk.X, padx=10, pady=2)
-                if data.get("fecha_nacimiento"):
-                    tk.Label(info_frame, text=f"Fecha de nacimiento: {data['fecha_nacimiento']}",
-                             font=("Arial", 11), bg="white", anchor="w").pack(fill=tk.X, padx=10, pady=2)
-                if data.get("direccion"):
-                    tk.Label(info_frame, text=f"Dirección: {data['direccion']}",
-                             font=("Arial", 11), bg="white", anchor="w").pack(fill=tk.X, padx=10, pady=2)
-            else:
-                tk.Label(parent, text="No se encontró información adicional del paciente",
-                         font=("Arial", 10), fg="red", bg="white").pack(pady=10)
-        else:
-            tk.Label(parent, text="No se encontró información adicional del paciente",
-                     font=("Arial", 10), fg="red", bg="white").pack(pady=10)
+        self._show_user_specific_details(parent, user_id, "paciente", "get_info_paciente",
+                                         [("Teléfono", "telefono"), ("Fecha nacimiento", "fecha_nacimiento"),
+                                          ("Dirección", "direccion")])
 
     def show_institucion_details(self, parent, user_id):
-        """Muestra detalles específicos de una institución"""
-        institucion_info = self.controller.get_info_institucion(user_id)
+        self._show_user_specific_details(parent, user_id, "institución", "get_info_institucion",
+                                         [("Dirección", "direccion"), ("Teléfono", "telefono"),
+                                          ("Tipo", "tipo_institucion")])
 
-        if institucion_info and institucion_info.data:
-            # Manejar si data es una lista o un diccionario
-            if isinstance(institucion_info.data, list) and len(institucion_info.data) > 0:
-                data = institucion_info.data[0]
-            elif isinstance(institucion_info.data, dict):
-                data = institucion_info.data
-            else:
-                data = None
+    def _show_user_specific_details(self, parent, user_id, tipo_label, method_name, fields):
+        """Método helper para mostrar detalles específicos de usuario"""
+        info = getattr(self.controller, method_name)(user_id)
 
-            if data:
-                info_frame = tk.LabelFrame(parent, text="Información de la Institución", font=("Arial", 12, "bold"),
-                                           bg="white")
-                info_frame.pack(fill=tk.X, pady=(0, 15))
+        if not (info and info.data):
+            tk.Label(parent, text=f"Sin información adicional del {tipo_label}", fg="gray").pack(pady=10)
+            return
 
-                if data.get("direccion"):
-                    tk.Label(info_frame, text=f"Dirección: {data['direccion']}",
-                             font=("Arial", 11), bg="white", anchor="w").pack(fill=tk.X, padx=10, pady=2)
-                if data.get("telefono"):
-                    tk.Label(info_frame, text=f"Teléfono: {data['telefono']}",
-                             font=("Arial", 11), bg="white", anchor="w").pack(fill=tk.X, padx=10, pady=2)
-                if data.get("tipo_institucion"):
-                    tk.Label(info_frame, text=f"Tipo: {data['tipo_institucion']}",
-                             font=("Arial", 11), bg="white", anchor="w").pack(fill=tk.X, padx=10, pady=2)
-            else:
-                tk.Label(parent, text="No se encontró información adicional de la institución",
-                         font=("Arial", 10), fg="red", bg="white").pack(pady=10)
-        else:
-            tk.Label(parent, text="No se encontró información adicional de la institución",
-                     font=("Arial", 10), fg="red", bg="white").pack(pady=10)
+        # Manejar formato de datos
+        data = info.data[0] if isinstance(info.data, list) and info.data else info.data
+        if not isinstance(data, dict):
+            tk.Label(parent, text=f"Sin información adicional del {tipo_label}", fg="gray").pack(pady=10)
+            return
+
+        # Mostrar campos
+        info_frame = tk.LabelFrame(parent, text=f"Información del {tipo_label.title()}")
+        info_frame.pack(fill=tk.X, pady=5)
+
+        for label, field_key in fields:
+            value = data.get(field_key)
+            if value:
+                tk.Label(info_frame, text=f"{label}: {value}", anchor="w").pack(fill=tk.X, padx=5, pady=1)
