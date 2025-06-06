@@ -2,6 +2,9 @@ import os
 from dotenv import load_dotenv
 from supabase import create_client
 from utils.date_utils import fecha_hora_actual_utc
+from utils.date_utils import fecha_hora_actual_utc
+
+
 
 load_dotenv()
 
@@ -176,6 +179,8 @@ def cancelar_turno(turno_id, paciente_id, motivo_cancelacion="Cancelado por el p
 
     return {"exito": True, "mensaje": "El turno fue cancelado correctamente."}
 
+
+
 # Función para ver HISTORIAL de Turnos
 def obtener_historial_turnos(paciente_id):
 
@@ -200,8 +205,6 @@ def obtener_historial_turnos(paciente_id):
         "proximos": turnos_proximos,
         "pasados": turnos_pasados
     }
-
-
 
 
 

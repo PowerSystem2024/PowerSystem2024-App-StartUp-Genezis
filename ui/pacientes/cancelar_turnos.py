@@ -46,3 +46,6 @@ class CancelarTurnosFrame(Frame):
             cancelar_turno(turno_id)
             messagebox.showinfo("Éxito", "El turno fue cancelado correctamente.")
             self.cargar_turnos()
+
+
+

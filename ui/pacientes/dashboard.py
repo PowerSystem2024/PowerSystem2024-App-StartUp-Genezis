@@ -14,7 +14,7 @@ class PacienteDashboard(Frame):
 
         Label(self.main_container, text="Panel del Paciente", font=("Arial", 18, "bold")).pack(pady=10)
 
-        Button(self.main_container, text="Ver / Editar Perfil", width=25, command=self.mostrar_perfil).pack(pady=5)
+        Button(self.main_container, text="Mis Datos", width=25, command=self.mostrar_perfil).pack(pady=5)
         Button(self.main_container, text="Mis Turnos", width=25, command=self.mostrar_turnos).pack(pady=5)
 
         self.current_subframe = None
@@ -28,7 +28,7 @@ class PacienteDashboard(Frame):
         self.ocultar_dashboard()
         self.limpiar_subframe()
         self.current_subframe = PerfilFrame(self, self.paciente_id, volver_callback=self.mostrar_dashboard)
-        self.current_subframe.pack(fill=BOTH, expand=True)
+        self.current_subframe.place(relx=0.5, rely=0.5, anchor=CENTER)
 
     def mostrar_turnos(self):
         self.ocultar_dashboard()

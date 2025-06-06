@@ -7,6 +7,7 @@ class PerfilFrame(Frame):
         super().__init__(parent)
         self.paciente_id = paciente_id
         self.volver_callback = volver_callback
+        self.modo_edicion = False
 
         # Título
         Label(self, text="Perfil del Paciente", font=("Arial", 16, "bold")).grid(row=0, column=0, columnspan=2, pady=10)
@@ -31,22 +32,27 @@ class PerfilFrame(Frame):
             Label(self, text=label + ":").grid(row=idx + 1, column=0, sticky=E, padx=5, pady=2)
             entry = Entry(self, textvariable=var, width=40)
 
-            # Desactivar los campos de solo lectura
             if label in ["ID", "Fecha de Creación", "Última Modificación"]:
                 entry.config(state=DISABLED)
+            else:
+                entry.config(state=DISABLED)  # ← Desactivamos todos los campos por defecto
 
             entry.grid(row=idx + 1, column=1, sticky=W, padx=5, pady=2)
             self.entries[label] = entry
 
+        # Botón para guardar cambios (lo creamos pero NO lo mostramos al inicio)
+        self.btn_guardar = Button(self, text="Guardar Cambios", command=self.guardar_cambios)
 
-        # Botón para guardar cambios
-        Button(self, text="Guardar Cambios", command=self.guardar_cambios).grid(
-            row=len(self.campos) + 1, column=0, columnspan=2, pady=10
+
+
+        # Botón "Editar Datos"
+        Button(self, text="Editar Datos", command=self.habilitar_edicion).grid(
+            row=len(self.campos) + 2, column=0, columnspan=2, pady=5
         )
 
         # Botón "Atrás"
         Button(self, text="Atrás", command=self.volver_callback).grid(
-            row=len(self.campos) + 2, column=0, columnspan=2, pady=5
+            row=len(self.campos) + 3, column=0, columnspan=2, pady=5
         )
 
         # No se cargan datos si no hay paciente
@@ -71,3 +77,16 @@ class PerfilFrame(Frame):
         datos = self.obtener_datos()
         print("Simulando guardado:", datos)
         messagebox.showinfo("Guardar", "¡Datos actualizados correctamente!")
+
+    def habilitar_edicion(self):
+        campos_editables = [
+            "Nombres", "Apellidos", "Fecha de Nacimiento",
+            "Género", "Obra Social / Seguro"
+        ]
+        for campo in campos_editables:
+            self.entries[campo].config(state=NORMAL)
+        self.modo_edicion = True
+        self.btn_guardar.grid(row=len(self.campos) + 1, column=0, columnspan=2, pady=10)
+
+
+
