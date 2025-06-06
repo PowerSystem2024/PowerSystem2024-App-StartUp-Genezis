@@ -5,7 +5,7 @@ from tkinter import ttk, messagebox
 from tkcalendar import Calendar
 from controllers.pac_controller import buscar_turnos_disponibles, reservar_turno
 
-class ReservarTurnoFrame(Frame):
+class ReservarTurnosFrame(Frame):
     def __init__(self, parent, paciente_id):
         super().__init__(parent)
         self.parent = parent

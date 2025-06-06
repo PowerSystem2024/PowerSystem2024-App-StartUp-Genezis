@@ -185,7 +185,7 @@ def obtener_historial_turnos(paciente_id):
         .eq("paciente_id", paciente_id) \
         .gte("fecha", fecha_hora_actual_utc()) \
         .neq("estado", "cancelado") \
-        .order("fecha", asc=True) \
+        .order("fecha") \
         .execute().data
 
     # Turnos pasados

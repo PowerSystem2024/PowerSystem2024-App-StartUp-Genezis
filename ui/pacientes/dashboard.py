@@ -1,6 +1,6 @@
 from tkinter import *
 from ui.pacientes.perfil import PerfilFrame
-from ui.pacientes.turnos import TurnosPacienteFrame
+from ui.pacientes.turnos_dashboard import TurnosPacienteFrame
 
 class PacienteDashboard(Frame):
     def __init__(self, parent, paciente_id, volver_callback=None):
