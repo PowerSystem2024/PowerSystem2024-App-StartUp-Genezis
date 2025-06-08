@@ -181,6 +181,14 @@ def eliminarTurno(turno_id):
     """Elimina un turno"""
     return supabase.table("turnos").delete().eq("id", turno_id).execute().data
 
+def obtenerTurnosPorMedico(medico_id):
+    """Obtiene turnos pendientes de un médico específico"""
+    return supabase.table("turnos").select("*").eq("medico_id", medico_id).neq("estado", "cancelado").execute().data
+
+def eliminarTurnosPorMedico(medico_id):
+    """Elimina todos los turnos de un médico específico"""
+    return supabase.table("turnos").delete().eq("medico_id", medico_id).execute().data
+
 #=======================================================================================================================
 def fecha_hora_actual():
     return datetime.now(timezone.utc).isoformat()

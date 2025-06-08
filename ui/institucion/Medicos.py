@@ -1,3 +1,4 @@
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 from controllers import inst_controller
@@ -21,10 +22,9 @@ class MedicosDashboard(tk.Frame):
         self.cargar_datos()
 
     def crear_widgets(self):
-
         # Frame para botones
         btn_frame = ttk.Frame(self.main_frame)
-        btn_frame.pack(fill=tk.X, pady=10)  # Los botones se empaquetan en la parte superior
+        btn_frame.pack(fill=tk.X, pady=10)
 
         # Botones dentro del btn_frame
         ttk.Button(
@@ -38,7 +38,6 @@ class MedicosDashboard(tk.Frame):
             text="Eliminar Médico",
             command=self.eliminar_medico
         ).pack(side=tk.RIGHT, padx=5)
-        # --- FIN DEL CAMBIO ---
 
         # Frame para lista de médicos
         self.lista_frame = ttk.LabelFrame(
@@ -46,7 +45,6 @@ class MedicosDashboard(tk.Frame):
             text="Médicos Registrados",
             padding="10"
         )
-        # Ahora, self.lista_frame se empaqueta después de btn_frame, y se expandirá para llenar el espacio restante
         self.lista_frame.pack(fill=tk.BOTH, expand=True)
 
         # TreeView para médicos
@@ -113,7 +111,7 @@ class MedicosDashboard(tk.Frame):
             )
 
     def agregar_medico(self):
-        dialogo = AgregarMedicoDialog(self.winfo_toplevel())  # Pasa la ventana principal como padre
+        dialogo = AgregarMedicoDialog(self.winfo_toplevel())
         self.winfo_toplevel().wait_window(dialogo.dialog)
 
         if dialogo.resultado:
@@ -155,26 +153,56 @@ class MedicosDashboard(tk.Frame):
             )
             return
 
-        if messagebox.askyesno(
-                "Confirmar",
-                "¿Está seguro que desea eliminar el médico seleccionado?"
-        ):
-            try:
-                # CORRECCIÓN: Usar "values" en lugar de "id"
-                valores = self.tree.item(seleccion[0], "values")
-                medico_id_to_delete = valores[0]  # El ID está en la primera posición
+        try:
+            # Obtener el ID del médico seleccionado
+            valores = self.tree.item(seleccion[0], "values")
+            medico_id_to_delete = valores[0]
 
-                inst_controller.eliminarMedico(medico_id_to_delete)
-                self.cargar_datos()
-                messagebox.showinfo(
-                    "Éxito",
-                    "Médico eliminado correctamente."
+            # Verificar si el médico tiene turnos pendientes
+            turnos_pendientes = inst_controller.obtenerTurnosPorMedico(medico_id_to_delete)
+
+            if turnos_pendientes:
+                # Si tiene turnos pendientes, mostrar ventana emergente con opciones
+                respuesta = messagebox.askyesnocancel(
+                    "Médico con turnos pendientes",
+                    f"El médico tiene {len(turnos_pendientes)} turno(s) pendiente(s).\n\n"
+                    "¿Desea eliminar también todos los turnos asociados?\n\n"
                 )
-            except Exception as e:
-                messagebox.showerror(
-                    "Error",
-                    f"Error al eliminar médico: {str(e)}"
-                )
+
+                if respuesta is True:  # Usuario eligió "Sí"
+                    # Eliminar primero los turnos del médico
+                    inst_controller.eliminarTurnosPorMedico(medico_id_to_delete)
+                    # Luego eliminar el médico
+                    inst_controller.eliminarMedico(medico_id_to_delete)
+                    self.cargar_datos()
+                    messagebox.showinfo(
+                        "Éxito",
+                        "Médico y todos sus turnos eliminados correctamente."
+                    )
+                elif respuesta is False:  # Usuario eligió "No"
+                    messagebox.showinfo(
+                        "Operación cancelada",
+                        "La eliminación del médico ha sido cancelada."
+                    )
+
+            else:
+                # Si no tiene turnos pendientes, proceder con eliminación normal
+                if messagebox.askyesno(
+                        "Confirmar",
+                        "¿Está seguro que desea eliminar el médico seleccionado?"
+                ):
+                    inst_controller.eliminarMedico(medico_id_to_delete)
+                    self.cargar_datos()
+                    messagebox.showinfo(
+                        "Éxito",
+                        "Médico eliminado correctamente."
+                    )
+
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                f"Error al eliminar médico: {str(e)}"
+            )
 
 
 class AgregarMedicoDialog:
@@ -185,23 +213,23 @@ class AgregarMedicoDialog:
 
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("Agregar Nuevo Médico")
-        self.dialog.geometry("400x500")  # Se mantiene el tamaño fijo
+        self.dialog.geometry("400x500")
         self.dialog.resizable(False, False)
 
         self.dialog.transient(parent)
         self.dialog.grab_set()
 
-        self.crear_widgets()  # Crear widgets antes de centrar
-        self.centrar_ventana()  # Centrar después de que los widgets estén creados y el tamaño sea definitivo
+        self.crear_widgets()
+        self.centrar_ventana()
 
     def centrar_ventana(self):
         """Centrar la ventana en la pantalla"""
-        self.dialog.update_idletasks()  # Asegura que los widgets se hayan renderizado para obtener el tamaño
+        self.dialog.update_idletasks()
         width = self.dialog.winfo_width()
         height = self.dialog.winfo_height()
         x = (self.dialog.winfo_screenwidth() // 2) - (width // 2)
         y = (self.dialog.winfo_screenheight() // 2) - (height // 2)
-        self.dialog.geometry(f"+{x}+{y}")  # Establece solo la posición, no el tamaño
+        self.dialog.geometry(f"+{x}+{y}")
 
     def crear_widgets(self):
         main_frame = ttk.Frame(self.dialog, padding="20")
@@ -224,30 +252,65 @@ class AgregarMedicoDialog:
         self.matricula_var = tk.StringVar()
         self.duracion_turno_var = tk.StringVar(value="30")
 
-        campos = [
-            ("Nombre:", self.nombre_var),
-            ("Apellido:", self.apellido_var),
-            ("Email:", self.email_var),
-            ("Contraseña:", self.password_var),
-            ("Especialidad:", self.especialidad_var),
-            ("Matrícula:", self.matricula_var),
-            ("Duración Turno (min):", self.duracion_turno_var)
+        # Lista de especialidades médicas
+        especialidades = [
+            "Cardiología",
+            "Dermatología",
+            "Endocrinología",
+            "Gastroenterología",
+            "Ginecología",
+            "Medicina General",
+            "Medicina Interna",
+            "Neurología",
+            "Oftalmología",
+            "Oncología",
+            "Ortopedia",
+            "Otorrinolaringología",
+            "Pediatría",
+            "Psiquiatría",
+            "Radiología",
+            "Traumatología",
+            "Urología"
         ]
 
         self.entries = {}
 
-        for i, (label_text, var) in enumerate(campos):
+        # Crear campos del formulario
+        campos = [
+            ("Nombre:", self.nombre_var, "entry"),
+            ("Apellido:", self.apellido_var, "entry"),
+            ("Email:", self.email_var, "entry"),
+            ("Contraseña:", self.password_var, "password"),
+            ("Especialidad:", self.especialidad_var, "combobox"),
+            ("Matrícula:", self.matricula_var, "entry"),
+            ("Duración Turno (min):", self.duracion_turno_var, "entry")
+        ]
+
+        for i, campo_info in enumerate(campos):
+            label_text, var = campo_info[0], campo_info[1]
+            tipo_widget = campo_info[2] if len(campo_info) > 2 else "entry"
+
             ttk.Label(form_frame, text=label_text).grid(
                 row=i, column=0, sticky='e', padx=(0, 10), pady=5
             )
 
-            if label_text == "Contraseña:":
-                entry = ttk.Entry(form_frame, textvariable=var, show="*", width=25)
+            if tipo_widget == "password":
+                widget = ttk.Entry(form_frame, textvariable=var, show="*", width=25)
+            elif tipo_widget == "combobox" and label_text == "Especialidad:":
+                widget = ttk.Combobox(
+                    form_frame,
+                    textvariable=var,
+                    values=especialidades,
+                    state="readonly",  # Solo permite seleccionar de la lista
+                    width=22
+                )
+                # Establecer valor por defecto
+                widget.set("Medicina General")
             else:
-                entry = ttk.Entry(form_frame, textvariable=var, width=25)
+                widget = ttk.Entry(form_frame, textvariable=var, width=25)
 
-            entry.grid(row=i, column=1, sticky='w', pady=5)
-            self.entries[label_text] = entry
+            widget.grid(row=i, column=1, sticky='w', pady=5)
+            self.entries[label_text] = widget
 
         btn_frame = ttk.Frame(main_frame)
         btn_frame.pack(fill=tk.X, pady=20)
