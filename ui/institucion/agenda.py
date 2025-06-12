@@ -1,89 +1,71 @@
-import tkinter as tk
+from tkinter import *
 from tkinter import ttk, messagebox
 from tkcalendar import Calendar
 from controllers import inst_controller
 import json
 from datetime import datetime
 
-
-class HorariosDisponiblesManager(tk.Toplevel):
+class AgendaMedicoFrame(Frame):
     def __init__(self, parent, institucion_id):
         super().__init__(parent)
-        self.title("Gestión de Horarios")
-        self.geometry("800x600")
+        self.parent = parent
         self.institucion_id = institucion_id
-
-        # Configuración de la ventana
-        self.configure(bg='#f0f0f0')
-        self.resizable(False, False)
-        self.grab_set()  # Hacer la ventana modal
-
+        
         # Frame principal
-        self.main_frame = ttk.Frame(self, padding="20")
-        self.main_frame.pack(fill=tk.BOTH, expand=True)
-
+        self.main_frame = ttk.Frame(self)
+        self.main_frame.pack(fill=BOTH, expand=True, padx=20, pady=20)
+        
         # Crear widgets
         self.crear_widgets()
-
+        
     def crear_widgets(self):
         # Frame para calendario
         calendar_frame = ttk.LabelFrame(
-            self.main_frame, 
-            text="Selección de Fecha", 
+            self.main_frame,
+            text="Calendario",
             padding="10"
         )
-        calendar_frame.pack(fill=tk.X, pady=(0, 10))
-
+        calendar_frame.pack(fill=X, pady=(0, 10))
+        
         # Agregar calendario
         self.calendar = Calendar(
             calendar_frame,
             selectmode='day',
             date_pattern='y-mm-dd',
-            locale='es_ES',
-            showweeknumbers=False
+            locale='es_ES'
         )
         self.calendar.pack(pady=5)
         self.calendar.bind("<<CalendarSelected>>", self.on_fecha_seleccionada)
-
+        
         # Frame para horarios
         horarios_frame = ttk.LabelFrame(
-            self.main_frame, 
-            text="Horarios Disponibles", 
+            self.main_frame,
+            text="Horarios del Día",
             padding="10"
         )
-        horarios_frame.pack(fill=tk.BOTH, expand=True)
-
-        # TreeView con nuevas columnas
+        horarios_frame.pack(fill=BOTH, expand=True)
+        
+        # TreeView para horarios
         columns = ("medico", "hora", "paciente", "estado")
         self.tree = ttk.Treeview(
-            horarios_frame, 
-            columns=columns, 
-            show='headings'
+            horarios_frame,
+            columns=columns,
+            show='headings',
+            height=10
         )
-        
+    
         # Configurar columnas
         self.tree.heading('medico', text='Médico')
         self.tree.heading('hora', text='Hora')
         self.tree.heading('paciente', text='Paciente')
         self.tree.heading('estado', text='Estado')
-        
-        self.tree.column('medico', width=200)
-        self.tree.column('hora', width=150)
-        self.tree.column('paciente', width=200)
-        self.tree.column('estado', width=100)
-        
-        self.tree.pack(fill=tk.BOTH, expand=True)
-
-    def on_fecha_seleccionada(self, event=None):
-        try:
-            fecha = self.calendar.get_date()
-            self.cargar_horarios_fecha(fecha)
-            
-        except Exception as e:
-            messagebox.showerror(
-                "Error",
-                f"Error al procesar la fecha: {str(e)}"
-            )
+    
+        self.tree.column('medico', width=200, anchor=W)
+        self.tree.column('hora', width=150, anchor=CENTER)
+        self.tree.column('paciente', width=200, anchor=W)
+        self.tree.column('estado', width=100, anchor=CENTER)
+    
+        self.tree.pack(fill=BOTH, expand=True)
 
     def cargar_horarios_fecha(self, fecha):
         try:
@@ -111,7 +93,7 @@ class HorariosDisponiblesManager(tk.Toplevel):
             print("---------------------------------------------------\n")
 
             if not turnos_filtrados:
-                self.tree.insert("", tk.END, values=(
+                self.tree.insert("", END, values=(
                     "-",
                     "-",
                     "-",
@@ -155,7 +137,7 @@ class HorariosDisponiblesManager(tk.Toplevel):
 
                 estado_turno = turno.get('estado', 'Estado Desconocido')
 
-                self.tree.insert("", tk.END, values=(
+                self.tree.insert("", END, values=(
                     nombre_medico,
                     f"{turno.get('hora_inicio', 'HH:MM')} - {turno.get('hora_fin', 'HH:MM')}",
                     nombre_paciente,
