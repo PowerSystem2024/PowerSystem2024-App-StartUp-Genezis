@@ -82,8 +82,8 @@ class App(tk.Tk):
             from ui.pacientes.dashboard import PacienteDashboard
             self.current_frame = PacienteDashboard(self, paciente_id=self.current_user['id'])
         elif user_type == "institucion":
-            from ui.institucion.dashboard import InstitucionDashboard
-            self.current_frame = InstitucionDashboard(self, self.current_user)
+            from ui.institucion.dashboard import InstitucionMainDashboard
+            self.current_frame = InstitucionMainDashboard(self, self.current_user)
         
         self.current_frame.pack(fill=tk.BOTH, expand=True)
     
