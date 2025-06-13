@@ -16,10 +16,25 @@ class UsersFrame(tk.Frame):
         # Título
         tk.Label(self, text="Gestión de Usuarios", font=("Arial", 14, "bold")).pack(pady=10)
 
+        #marco para barra busqueda
+        search_frame = tk.Frame(self)
+        search_frame.pack(fill=tk.X,padx=10,pady=5)
+
+        #Barra de Busqueda
+        search_label = tk.Label(search_frame, text="Buscar:",font=("Arial",10,))
+        search_label.pack(side=tk.LEFT,padx=(0,5))
+        self.search_entry = tk.Entry(search_frame,width=20)
+        self.search_entry.pack(side=tk.LEFT,padx=(5))
+
+        #boton de busqueda
+        search_button = ttk.Button(search_frame, text="🔍 Buscar", command=self.search_users)
+        search_button.pack(side=tk.LEFT, padx=5)
+
+
         # Filtro
         filtro_frame = tk.Frame(self)
         filtro_frame.pack()
-        tk.Label(filtro_frame, text="Filtrar por tipo:").pack(side=tk.LEFT, padx=5)
+        tk.Label(filtro_frame, text="Filtrar por tipo:").pack(side=tk.LEFT, padx=(20,5))
 
         tipo_combo = ttk.Combobox(
             filtro_frame, textvariable=self.tipo_usuario_filtro,
@@ -30,8 +45,8 @@ class UsersFrame(tk.Frame):
         tipo_combo.bind("<<ComboboxSelected>>", lambda e: self.load_users())
 
         # Tabla
-        self.tree = ttk.Treeview(self, columns=("nombre", "email", "tipo"), show="headings")
-        for col, text in [("nombre", "Nombre"), ("email", "Email"), ("tipo", "Tipo")]:
+        self.tree = ttk.Treeview(self, columns=("nombre", "apellido", "email", "tipo"), show="headings")
+        for col, text in [("nombre", "Nombre"), ("apellido", "Apellido"), ("email", "Email"), ("tipo", "Tipo")]:
             self.tree.heading(col, text=text)
 
         self.tree.bind("<Double-1>", self.show_user_detail)
@@ -47,6 +62,43 @@ class UsersFrame(tk.Frame):
 
             tk.Button(btn_frame, text=text, command=cmd).pack(side=tk.LEFT, padx=5)
 
+        self.search_entry.bind("<Return>", lambda e: self.search_users())
+
+    def search_users(self):
+        """Método para buscar usuarios según el texto ingresado"""
+        search_text = self.search_entry.get().lower().strip()
+        tipo_filtro = self.tipo_usuario_filtro.get()
+
+        # Limpiar la tabla
+        self.tree.delete(*self.tree.get_children())
+
+        # Obtener todos los usuarios
+        usuarios = self.controller.obtener_usuarios()
+
+        if usuarios:
+            for user in usuarios:
+                # Verificar si el usuario coincide con los criterios de búsqueda
+                matches_search = (
+                        search_text in user.get("nombre", "").lower() or
+                        search_text in user.get("apellido", "").lower() or
+                        search_text in user.get("email", "").lower()
+                )
+
+                matches_filter = (
+                        tipo_filtro == "todos" or
+                        user.get("tipo") == tipo_filtro
+                )
+
+                # Si coincide con la búsqueda y el filtro, mostrar el usuario
+                if matches_search and matches_filter:
+                    values = (
+                        user.get("nombre"),
+                        user.get("apellido"),
+                        user.get("email"),
+                        user.get("tipo")
+                    )
+                    self.tree.insert("", "end", values=values, tags=(user.get("id"),))
+
     def load_users(self):
         self.tree.delete(*self.tree.get_children())
         usuarios = self.controller.obtener_usuarios()
@@ -55,7 +107,7 @@ class UsersFrame(tk.Frame):
             tipo_filtro = self.tipo_usuario_filtro.get()
             for user in usuarios:
                 if tipo_filtro == "todos" or user.get("tipo") == tipo_filtro:
-                    values = (user.get("nombre"), user.get("email"), user.get("tipo"))
+                    values = (user.get("nombre"),user.get("apellido"), user.get("email"), user.get("tipo"))
                     self.tree.insert("", "end", values=values, tags=(user.get("id"),))
 
     def get_selected_user_id(self):
@@ -75,12 +127,13 @@ class UsersFrame(tk.Frame):
             return
 
         values = self.tree.item(self.tree.selection()[0])["values"]
-        user_tipo = values[2]
+        user_tipo = values[3]
 
         user_data = {
             "id": user_id,
             "nombre": values[0],
-            "email": values[1],
+            "apellido": values[1],
+            "email": values[2],
             "tipo": user_tipo
         }
 
