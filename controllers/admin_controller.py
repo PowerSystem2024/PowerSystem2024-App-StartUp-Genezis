@@ -1,4 +1,6 @@
 import os
+import secrets
+
 from dotenv import load_dotenv
 from supabase import create_client
 from utils.date_utils import fecha_hora_actual_utc
@@ -112,6 +114,52 @@ def actualizar_institucion(institucion_id, nuevos_datos):
     nuevos_datos["actualizado_en"] = fecha_hora_actual_utc()
     return supabase.table("instituciones").update(nuevos_datos).eq("id", institucion_id).execute().data
 
+
+def registrar_nueva_institucion(nombre, password, direccion, email, telefono="", descripcion="",
+                                horario_apertura="09:00", horario_cierre="18:00", logo_url=""):
+    """
+    Orquesta la creación completa de una institución:
+    1. Crea el usuario de tipo 'institucion' con la contraseña proporcionada.
+    2. Usa el ID de ese nuevo usuario para crear el registro en la tabla 'instituciones'.
+    """
+    try:
+        # Paso 1: Crear el usuario asociado con su contraseña
+        usuario_data = crear_usuario(
+            email=email,
+            password=password,  # La contraseña que el admin definió en el formulario.
+            tipo='institucion',
+            nombre=nombre,
+            apellido='Institución'
+        )
+
+        if not usuario_data:
+            raise Exception("No se pudo crear el registro de usuario para la institución.")
+
+        nuevo_usuario_id = usuario_data[0]['id']
+
+        # Paso 2: Crear la institución y enlazarla al nuevo usuario
+        institucion_creada = crear_institucion(
+            usuario_id=nuevo_usuario_id, nombre=nombre, direccion=direccion, telefono=telefono,
+            email=email, descripcion=descripcion, horario_apertura=horario_apertura,
+            horario_cierre=horario_cierre, logo_url=logo_url
+        )
+
+        if not institucion_creada:
+            # En un sistema real, aquí se implementaría un 'rollback' para borrar el usuario
+            # si este segundo paso falla, para no dejar datos huérfanos.
+            # borrar_usuario(nuevo_usuario_id)
+            raise Exception("El usuario fue creado, pero la institución no pudo registrarse.")
+
+        return institucion_creada
+
+    except Exception as e:
+        print(f"Error en el proceso de registro de institución: {e}")
+        raise e
+
+
+# --- ASEGÚRATE DE QUE EL CONTROLADOR CONOZCA ESTE MÉTODO ---
+# Al final de tu archivo, donde agregas los otros métodos, añade esta línea:
+setattr(AdminController, 'registrar_nueva_institucion', staticmethod(registrar_nueva_institucion))
 
 # ====================================
 # REPORTES Y ESTADÍSTICAS (Ahora optimizados)
