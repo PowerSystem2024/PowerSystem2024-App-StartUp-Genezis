@@ -99,25 +99,19 @@ class ReportsFrame(tk.Frame):
         tk.Frame(analysis_frame, height=5, bg='#f5f5f5').pack()
 
     def _get_stats(self):
-        result = self.controller.get_all_users()
+        # Usar el método de estadísticas optimizado del controlador
+        stats = self.controller.obtener_estadisticas_sistema()
 
-        if not (result and result.data):
+        if not stats:
             return {"usuarios_totales": 0, "medicos": 0, "pacientes": 0, "instituciones": 0, "admins": 0}
 
-        usuarios = result.data
-        counts = {"medico": 0, "paciente": 0, "institucion": 0, "admin": 0}
-
-        for usuario in usuarios:
-            tipo = usuario.get("tipo", "").lower()
-            if tipo in counts:
-                counts[tipo] += 1
-
+        # Adaptamos las estadísticas al formato esperado por la UI
         return {
-            "usuarios_totales": len(usuarios),
-            "medicos": counts["medico"],
-            "pacientes": counts["paciente"],
-            "instituciones": counts["institucion"],
-            "admins": counts["admin"]
+            "usuarios_totales": stats.get("usuarios_totales", 0),
+            "medicos": stats.get("medicos_totales", 0),
+            "pacientes": stats.get("pacientes_totales", 0),
+            "instituciones": stats.get("instituciones_totales", 0),
+            "admins": stats.get("admins_totales", 0)  # Ahora sí tenemos conteo específico de admins
         }
 
     def _generate_analysis(self):
@@ -156,6 +150,36 @@ class ReportsFrame(tk.Frame):
         return analysis[:3]  # Máximo 3 puntos
 
     def refresh_data(self):
+        """Actualiza los datos de la interfaz sin reconstruir toda la UI"""
+        # Obtenemos las estadísticas actualizadas
+        stats = self._get_stats()
+
+        # Actualizamos la sección de estadísticas
         for widget in self.winfo_children():
-            widget.destroy()
-        self.setup_ui()
+            if isinstance(widget, tk.LabelFrame) and widget.cget("text") == "Estadísticas":
+                for child in widget.winfo_children():
+                    if isinstance(child, tk.Frame):
+                        for label in child.winfo_children():
+                            if isinstance(label, tk.Label) and label.cget("font") == ("Arial", 9, "bold"):
+                                # Encontramos una etiqueta de valor
+                                label_text = label.cget("text")
+                                for key, value in stats.items():
+                                    if key in label_text.lower():
+                                        label.config(text=str(value))
+                                        break
+
+        # Actualizamos la tabla
+        self._fill_table()
+
+        # Actualizamos el análisis
+        for widget in self.winfo_children():
+            if isinstance(widget, tk.LabelFrame) and widget.cget("text") == "Resumen por Tipo":
+                for child in widget.winfo_children():
+                    if isinstance(child, tk.Frame) and child.cget("relief") == "solid":
+                        for label in child.winfo_children():
+                            if isinstance(label, tk.Label) and "•" in label.cget("text"):
+                                label.destroy()
+                        analysis_points = self._generate_analysis()
+                        for point in analysis_points:
+                            tk.Label(child, text=f"• {point}", font=("Arial", 8),
+                                     bg='#f5f5f5', anchor='w').pack(fill=tk.X, padx=15, pady=1)
