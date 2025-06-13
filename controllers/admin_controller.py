@@ -4,6 +4,7 @@ import secrets
 from dotenv import load_dotenv
 from supabase import create_client
 from utils.date_utils import fecha_hora_actual_utc
+from utils.security_utils import hash_password
 
 # Cargar variables de entorno
 load_dotenv()
@@ -41,9 +42,10 @@ def _obtener_id_asociado(tabla, usuario_id):
 def crear_usuario(email, password, tipo, nombre, apellido):
     """Crea un nuevo usuario en la tabla 'usuarios'."""
     # IMPORTANTE: La contraseña debe ser hasheada antes de guardarse en producción.
+    hashed_password = hash_password(password)
     data = {
         "email": email,
-        "password": password,
+        "password": hashed_password,
         "tipo": tipo,
         "nombre": nombre,
         "apellido": apellido,
@@ -124,9 +126,10 @@ def registrar_nueva_institucion(nombre, password, direccion, email, telefono="",
     """
     try:
         # Paso 1: Crear el usuario asociado con su contraseña
+        hashed_password = hash_password(password)
         usuario_data = crear_usuario(
             email=email,
-            password=password,  # La contraseña que el admin definió en el formulario.
+            password=hashed_password,  # La contraseña que el admin definió en el formulario.
             tipo='institucion',
             nombre=nombre,
             apellido='Institución'
