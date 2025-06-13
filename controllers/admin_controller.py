@@ -11,6 +11,11 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
+class AdminController:
+    def __init__(self):
+        self.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
 # ====================================
 # HELPERS EFICIENTES (la clave de la optimización)
 # ====================================
@@ -63,6 +68,19 @@ def borrar_usuario(usuario_id):
     return supabase.table("usuarios").delete().eq("id", usuario_id).execute().data
 
 
+# Métodos de la clase AdminController
+default_admin_methods = {
+    'crear_usuario': crear_usuario,
+    'obtener_usuarios': obtener_usuarios,
+    'actualizar_usuario': actualizar_usuario,
+    'borrar_usuario': borrar_usuario,
+}
+
+# Agregar métodos a la clase AdminController
+for method_name, method in default_admin_methods.items():
+    setattr(AdminController, method_name, staticmethod(method))
+
+
 # ====================================
 # GESTIÓN DE INSTITUCIONES
 # ====================================
@@ -101,26 +119,38 @@ def actualizar_institucion(institucion_id, nuevos_datos):
 
 def obtener_estadisticas_sistema():
     """
-    Obtiene estadísticas del sistema contando directamente en la base de datos,
-    lo cual es mucho más eficiente.
+    Obtiene estadísticas del sistema contando por el campo 'tipo' en la tabla 'usuarios',
+    asegurando que los datos sean consistentes y correctos.
     """
     try:
-        usuarios_count = supabase.table("usuarios").select("id", count='exact').execute().count
-        instituciones_count = supabase.table("instituciones").select("id", count='exact').execute().count
-        medicos_count = supabase.table("medicos").select("id", count='exact').execute().count
-        pacientes_count = supabase.table("pacientes").select("id", count='exact').execute().count
+        # Contamos cada tipo de usuario directamente desde la tabla 'usuarios'.
+        # Esta es la fuente de verdad única y correcta.
+        medicos_count = supabase.table("usuarios").select("id", count='exact').eq("tipo", "medico").execute().count
+        pacientes_count = supabase.table("usuarios").select("id", count='exact').eq("tipo", "paciente").execute().count
+        instituciones_count = supabase.table("usuarios").select("id", count='exact').eq("tipo", "institucion").execute().count
+        admins_count = supabase.table("usuarios").select("id", count='exact').eq("tipo", "admin").execute().count
+
+        # El total de usuarios se puede obtener sumando los parciales o con una consulta general.
+        # Sumar es más rápido si ya tenemos los conteos.
+        usuarios_totales = medicos_count + pacientes_count + instituciones_count + admins_count
+
+        # El conteo de turnos sigue siendo sobre su propia tabla.
         turnos_count = supabase.table("turnos").select("id", count='exact').execute().count
 
         return {
-            "usuarios_totales": usuarios_count,
-            "instituciones_totales": instituciones_count,
+            "usuarios_totales": usuarios_totales,
             "medicos_totales": medicos_count,
             "pacientes_totales": pacientes_count,
-            "turnos_totales": turnos_count,
+            "instituciones_totales": instituciones_count,
+            "admins_totales": admins_count,
+            "turnos_totales": turnos_count
         }
     except Exception as e:
         print(f"Error al obtener estadísticas: {e}")
-        return None  # O un diccionario con ceros
+        return {
+            "usuarios_totales": 0, "medicos_totales": 0, "pacientes_totales": 0,
+            "instituciones_totales": 0, "admins_totales": 0, "turnos_totales": 0
+        }
 
 
 # ====================================
@@ -173,3 +203,16 @@ def obtener_info_paciente(usuario_id):
 def obtener_info_institucion(usuario_id):
     """Obtiene el perfil de una institución a partir de su usuario_id."""
     return supabase.table("instituciones").select("*").eq("usuario_id", usuario_id).limit(1).execute().data
+
+
+# Añadir métodos de información a la clase AdminController
+info_methods = {
+    'obtener_info_completa_medico': obtener_info_completa_medico,
+    'obtener_info_paciente': obtener_info_paciente,
+    'obtener_info_institucion': obtener_info_institucion,
+    'obtener_estadisticas_sistema': obtener_estadisticas_sistema
+}
+
+# Agregar métodos a la clase AdminController
+for method_name, method in info_methods.items():
+    setattr(AdminController, method_name, staticmethod(method))

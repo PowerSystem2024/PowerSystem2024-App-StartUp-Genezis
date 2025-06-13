@@ -48,11 +48,11 @@ class UsersFrame(tk.Frame):
 
     def load_users(self):
         self.tree.delete(*self.tree.get_children())
-        result = self.controller.get_all_users()
+        usuarios = self.controller.obtener_usuarios()
 
-        if result and result.data:
+        if usuarios:
             tipo_filtro = self.tipo_usuario_filtro.get()
-            for user in result.data:
+            for user in usuarios:
                 if tipo_filtro == "todos" or user.get("tipo") == tipo_filtro:
                     values = (user.get("nombre"), user.get("email"), user.get("tipo"))
                     self.tree.insert("", "end", values=values, tags=(user.get("id"),))
@@ -81,7 +81,7 @@ class UsersFrame(tk.Frame):
             return
 
         if messagebox.askyesno("Confirmar", "¿Eliminar este usuario?"):
-            self.controller.delete_user(user_id)
+            self.controller.borrar_usuario(user_id)
             self.load_users()
 
     def open_user_form(self, user_id=None, user_data=None):
@@ -136,9 +136,9 @@ class UsersFrame(tk.Frame):
 
             if user_id:
                 del data["password"]  # No enviar password en edición
-                self.controller.update_user(user_id, data)
+                self.controller.actualizar_usuario(user_id, data)
             else:
-                self.controller.create_user(data)
+                self.controller.crear_usuario(data["email"], data["password"], data["tipo"], data["nombre"], data["apellido"])
 
             form.destroy()
             self.load_users()
@@ -177,7 +177,7 @@ class UsersFrame(tk.Frame):
             self.show_institucion_details(content_frame, user_id)
 
     def show_medico_details(self, parent, user_id):
-        medico_info = self.controller.get_medico_full_info(user_id)
+        medico_info = self.controller.obtener_info_completa_medico(user_id)
         if not medico_info:
             tk.Label(parent, text="Sin información adicional", fg="gray").pack(pady=10)
             return
@@ -225,12 +225,12 @@ class UsersFrame(tk.Frame):
                              fg="gray", anchor="w").pack(fill=tk.X, padx=10)
 
     def show_paciente_details(self, parent, user_id):
-        self._show_user_specific_details(parent, user_id, "paciente", "get_info_paciente",
+        self._show_user_specific_details(parent, user_id, "paciente", "obtener_info_paciente",
                                          [("Teléfono", "telefono"), ("Fecha nacimiento", "fecha_nacimiento"),
                                           ("Dirección", "direccion")])
 
     def show_institucion_details(self, parent, user_id):
-        self._show_user_specific_details(parent, user_id, "institución", "get_info_institucion",
+        self._show_user_specific_details(parent, user_id, "institución", "obtener_info_institucion",
                                          [("Dirección", "direccion"), ("Teléfono", "telefono"),
                                           ("Tipo", "tipo_institucion")])
 
@@ -238,12 +238,12 @@ class UsersFrame(tk.Frame):
         """Método helper para mostrar detalles específicos de usuario"""
         info = getattr(self.controller, method_name)(user_id)
 
-        if not (info and info.data):
+        if not info:
             tk.Label(parent, text=f"Sin información adicional del {tipo_label}", fg="gray").pack(pady=10)
             return
 
         # Manejar formato de datos
-        data = info.data[0] if isinstance(info.data, list) and info.data else info.data
+        data = info[0] if isinstance(info, list) and info else info
         if not isinstance(data, dict):
             tk.Label(parent, text=f"Sin información adicional del {tipo_label}", fg="gray").pack(pady=10)
             return

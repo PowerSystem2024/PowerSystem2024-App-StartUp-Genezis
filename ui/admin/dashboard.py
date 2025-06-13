@@ -5,6 +5,10 @@ from tkinter import ttk
 from controllers.admin_controller import AdminController
 
 
+import tkinter as tk
+from tkinter import ttk
+from controllers.admin_controller import AdminController
+
 class AdminDashboard(tk.Frame):
     def __init__(self, parent, user_data):
         super().__init__(parent)
