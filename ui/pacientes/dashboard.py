@@ -1,6 +1,7 @@
 from tkinter import *
 from ui.pacientes.perfil import PerfilFrame
 from ui.pacientes.turnos_dashboard import TurnosPacienteFrame
+from utils.sesion import usuario_actual
 
 class PacienteDashboard(Frame):
     def __init__(self, parent, paciente_id, volver_callback=None):
@@ -12,7 +13,12 @@ class PacienteDashboard(Frame):
         self.main_container = Frame(self)
         self.main_container.pack(side=TOP, anchor=N, pady=50)
 
-        Label(self.main_container, text="Panel del Paciente", font=("Arial", 18, "bold")).pack(pady=10)
+        #Titulo dinamico
+        nombre = usuario_actual.get("nombre", "Paciente")
+        apellido = usuario_actual.get("apellido", "")
+        titulo = f"Panel de {nombre} {apellido}"
+
+        Label(self.main_container, text=titulo, font=("Arial", 18, "bold")).pack(pady=10)
 
         Button(self.main_container, text="Mis Datos", width=25, command=self.mostrar_perfil).pack(pady=5)
         Button(self.main_container, text="Mis Turnos", width=25, command=self.mostrar_turnos).pack(pady=5)

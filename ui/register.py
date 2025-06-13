@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from controllers.auth_controller import AuthController
+from utils.sesion import usuario_actual
 
 class RegisterFrame(ttk.Frame):
     """Pantalla de registro de usuario"""
@@ -76,11 +77,15 @@ class RegisterFrame(ttk.Frame):
         }
         
         user = self.auth_controller.register(user_data)
-        
+
         if user:
-            # Registro exitoso
+            # Guardamos temporalmente los datos del usuario registrado
+            usuario_actual.clear()
+            usuario_actual.update(user_data)
+
             messagebox.showinfo("Éxito", "Usuario registrado correctamente")
             self.on_register_success()
+
         else:
             # Registro fallido
             messagebox.showerror("Error", "No se pudo registrar el usuario")

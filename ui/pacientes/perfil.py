@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import messagebox
+from utils.sesion import usuario_actual
 
 
 class PerfilFrame(Frame):
@@ -14,15 +15,13 @@ class PerfilFrame(Frame):
 
         # Campos para completar
         self.campos = {
-            "ID": StringVar(),
             "Nombres": StringVar(),
             "Apellidos": StringVar(),
             "Fecha de Nacimiento": StringVar(),
             "Género": StringVar(),
             "Obra Social / Seguro": StringVar(),
             "Número de Afiliado": StringVar(),
-            "Fecha de Creación": StringVar(),
-            "Última Modificación": StringVar(),
+
         }
 
         # Etiquetas y campos de entrada con campos de solo lectura
@@ -55,20 +54,17 @@ class PerfilFrame(Frame):
             row=len(self.campos) + 3, column=0, columnspan=2, pady=5
         )
 
-        # No se cargan datos si no hay paciente
-        if paciente_id:
-            self.campos["ID"].set(str(paciente_id))
+        self.cargar_datos(usuario_actual)
+
 
     def cargar_datos(self, paciente):
-        self.campos["ID"].set(paciente.get("id", ""))
-        self.campos["Nombres"].set(paciente.get("nombres", ""))
-        self.campos["Apellidos"].set(paciente.get("apellidos", ""))
-        self.campos["Fecha de Nacimiento"].set(paciente.get("fecha_nacimiento", ""))
-        self.campos["Género"].set(paciente.get("genero", ""))
-        self.campos["Obra Social / Seguro"].set(paciente.get("obra_social", ""))
-        self.campos["Número de Afiliado"].set(paciente.get("numero_afiliado", ""))
-        self.campos["Fecha de Creación"].set(paciente.get("fecha_creacion", ""))
-        self.campos["Última Modificación"].set(paciente.get("ultima_modificacion", ""))
+            self.campos["Nombres"].set(paciente.get("nombre", ""))
+            self.campos["Apellidos"].set(paciente.get("apellido", ""))
+            self.campos["Fecha de Nacimiento"].set(paciente.get("fecha_nacimiento", ""))
+            self.campos["Género"].set(paciente.get("genero", ""))
+            self.campos["Obra Social / Seguro"].set(paciente.get("obra_social", ""))
+            self.campos["Número de Afiliado"].set(paciente.get("num_afiliado", ""))
+
 
     def obtener_datos(self):
         return {campo: var.get() for campo, var in self.campos.items()}
