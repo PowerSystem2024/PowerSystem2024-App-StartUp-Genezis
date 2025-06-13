@@ -2,11 +2,7 @@
 
 from tkinter import *
 from tkinter import ttk, messagebox
-from controllers.med_controller import (
-    obtener_horarios_disponibles,
-    agregar_horario_disponible,
-    eliminar_horario_disponible
-)
+from controllers.med_controller import obtener_horarios_disponibles, agregar_horario_disponible, eliminar_horario_disponible
 
 class HorariosFrame(Frame):
     def __init__(self, parent, medico_id):
