@@ -161,11 +161,6 @@ class UsersFrame(tk.Frame):
         tk.Button(form, text="Guardar", command=submit).pack(pady=15)
 
     def open_institution_edit_form(self, user_data):
-        """
-        # MÉTODO NUEVO Y CORREGIDO: Ahora es un método de la clase, no está anidado.
-        # Se dedica exclusivamente a editar una institución.
-        # NOTA: La indentación aquí es crucial. Está al mismo nivel que los otros métodos.
-        """
         info_institucion = self.controller.obtener_info_institucion(user_data['id'])
         if not info_institucion or not isinstance(info_institucion, list):
             messagebox.showerror("Error", "No se pudo cargar la información detallada de la institución.")
@@ -174,48 +169,107 @@ class UsersFrame(tk.Frame):
         detalle_institucion = info_institucion[0]
         institucion_id_db = detalle_institucion.get("id")
 
+        # --- Configuración de la Ventana Principal ---
         form = tk.Toplevel(self)
         form.title(f"Editando Institución: {user_data.get('nombre', '')}")
-        form.geometry("400x450")
+        form.geometry("450x480")  # Un poco más ancho para que quepa bien
+        form.resizable(False, False)
+        form.configure(padx=15, pady=15)  # Padding general para la ventana
+
+        # --- Contenedor Principal ---
+        main_frame = ttk.Frame(form)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # --- Sección 1: Datos de la Institución ---
+        datos_frame = ttk.LabelFrame(main_frame, text=" Datos de la Institución ", padding=(10, 5))
+        datos_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        datos_frame.columnconfigure(1, weight=1)  # Hacemos que la columna de los entry se expanda
 
         fields = {}
         field_configs = [
-            ("nombre", "Nombre", detalle_institucion.get("nombre")),
-            ("direccion", "Dirección", detalle_institucion.get("direccion")),
-            ("telefono", "Teléfono", detalle_institucion.get("telefono")),
-            ("email", "Email", detalle_institucion.get("email")),
-            ("descripcion", "Descripción", detalle_institucion.get("descripcion")),
-            ("horario_apertura", "Apertura (HH:MM)", detalle_institucion.get("horario_apertura")),
-            ("horario_cierre", "Cierre (HH:MM)", detalle_institucion.get("horario_cierre"))
+            ("nombre", "Nombre:", detalle_institucion.get("nombre")),
+            ("direccion", "Dirección:", detalle_institucion.get("direccion")),
+            ("telefono", "Teléfono:", detalle_institucion.get("telefono")),
+            ("email", "Email:", detalle_institucion.get("email")),
+            ("descripcion", "Descripción:", detalle_institucion.get("descripcion")),
+            ("horario_apertura", "Apertura:", detalle_institucion.get("horario_apertura")),
+            ("horario_cierre", "Cierre:", detalle_institucion.get("horario_cierre"))
         ]
 
-        for field, label, initial_value in field_configs:
-            frame = tk.Frame(form)
-            frame.pack(fill=tk.X, padx=10, pady=5)
-            tk.Label(frame, text=label, width=15, anchor='w').pack(side=tk.LEFT)
-            entry = tk.Entry(frame)
-            entry.pack(side=tk.RIGHT, expand=True, fill=tk.X)
+        # Usamos un bucle para crear y posicionar las etiquetas y campos con .grid()
+        for i, (field, label, initial_value) in enumerate(field_configs):
+            ttk.Label(datos_frame, text=label).grid(row=i, column=0, sticky="w", padx=5, pady=5)
+            entry = ttk.Entry(datos_frame)
+            entry.grid(row=i, column=1, sticky="ew", padx=5, pady=5)
             if initial_value:
                 entry.insert(0, initial_value)
             fields[field] = entry
 
+        # --- Sección 2: Cambiar Contraseña ---
+        pass_frame = ttk.LabelFrame(main_frame, text=" Cambiar Contraseña (Opcional) ", padding=(10, 5))
+        pass_frame.grid(row=1, column=0, sticky="ew")
+        pass_frame.columnconfigure(1, weight=1)
+
+        password_fields = {}
+        password_configs = [
+            ("nueva_password", "Nueva Contraseña:"),
+            ("confirmar_password", "Confirmar Contraseña:")
+        ]
+
+        for i, (field, label) in enumerate(password_configs):
+            ttk.Label(pass_frame, text=label).grid(row=i, column=0, sticky="w", padx=5, pady=5)
+            entry = ttk.Entry(pass_frame, show="*")
+            entry.grid(row=i, column=1, sticky="ew", padx=5, pady=5)
+            password_fields[field] = entry
+
+        # --- Botón de Guardado ---
+        # Lo colocamos en el main_frame para que esté centrado y abajo
+        save_button = ttk.Button(main_frame, text="Guardar Cambios")
+        save_button.grid(row=2, column=0, pady=(20, 0))
+
+        # --- Lógica del Botón (sin cambios en la funcionalidad) ---
         def submit():
-            """La lógica de guardado específica para este formulario."""
+            # 1. Guardar datos de la institución
             nuevos_datos = {field: entry.get().strip() for field, entry in fields.items()}
-
-            if not all([nuevos_datos.get("nombre"), nuevos_datos.get("email"), nuevos_datos.get("direccion")]):
-                messagebox.showwarning("Campos incompletos", "Nombre, Email y Dirección son obligatorios.", parent=form)
-                return
-
             try:
                 self.controller.actualizar_institucion(institucion_id_db, nuevos_datos)
-                messagebox.showinfo("Éxito", "Institución actualizada correctamente.", parent=form)
-                form.destroy()
-                self.load_users()
             except Exception as e:
-                messagebox.showerror("Error de Actualización", f"No se pudo guardar la institución:\n{e}", parent=form)
+                messagebox.showerror("Error de Actualización", f"No se pudo guardar los datos de la institución:\n{e}",
+                                     parent=form)
+                return
 
-        tk.Button(form, text="Guardar Cambios", command=submit).pack(pady=20)
+            # 2. Manejar la actualización de contraseña
+            nueva_pass = password_fields["nueva_password"].get().strip()
+            confirmar_pass = password_fields["confirmar_password"].get().strip()
+            password_updated_successfully = False
+
+            if nueva_pass:
+                if nueva_pass != confirmar_pass:
+                    messagebox.showwarning("Contraseñas no coinciden", "Las contraseñas ingresadas no son iguales.",
+                                           parent=form)
+                    return
+
+                try:
+                    usuario_id = user_data['id']
+                    self.controller.admin_actualizar_password_usuario(usuario_id, nueva_pass)
+                    password_updated_successfully = True
+                except Exception as e:
+                    messagebox.showerror("Error de Contraseña", f"No se pudo actualizar la contraseña:\n{e}",
+                                         parent=form)
+                    return
+
+            # 3. Mostrar mensaje final y cerrar
+            if password_updated_successfully:
+                messagebox.showinfo("Éxito", "Datos de la institución y contraseña actualizados correctamente.",
+                                    parent=form)
+            else:
+                messagebox.showinfo("Éxito", "Datos de la institución actualizados.", parent=form)
+
+            form.destroy()
+            self.load_users()
+
+        # Asignamos el comando al botón después de definir la función
+        save_button.config(command=submit)
 
 
     def show_user_detail(self, event=None):

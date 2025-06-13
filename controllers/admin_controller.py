@@ -59,6 +59,21 @@ def borrar_usuario(usuario_id):
     """Borra un usuario."""
     return supabase.table("usuarios").delete().eq("id", usuario_id).execute().data
 
+def admin_actualizar_password_usuario(usuario_id, nueva_password):
+    """
+    Permite a un admin actualizar la contraseña de un usuario.
+    La contraseña siempre se hashea antes de guardarse.
+    """
+    if not nueva_password:
+        raise ValueError("La nueva contraseña no puede estar vacía.")
+
+    hashed_password = hash_password(nueva_password)
+    datos_actualizados = {
+        "password": hashed_password,
+        "actualizado_en": fecha_hora_actual_utc()
+    }
+    return supabase.table("usuarios").update(datos_actualizados).eq("id", usuario_id).execute().data
+
 
 # ====================================
 # SECCIÓN: GESTIÓN DE INSTITUCIONES
@@ -168,6 +183,7 @@ user_methods = {
     'obtener_usuarios': obtener_usuarios,
     'actualizar_usuario': actualizar_usuario,
     'borrar_usuario': borrar_usuario,
+    'admin_actualizar_password_usuario': admin_actualizar_password_usuario
 }
 
 # Métodos de gestión de instituciones (ESTA ERA LA PARTE QUE FALTABA)
