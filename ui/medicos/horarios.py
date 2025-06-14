@@ -8,7 +8,7 @@ from controllers.med_controller import (
     eliminar_horario_disponible
 )
 
-DIAS_SEMANA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado","Domingo"]
 
 class HorariosFrame(Frame):
     def __init__(self, parent, medico_id):
