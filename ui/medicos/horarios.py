@@ -4,38 +4,49 @@ from tkinter import *
 from tkinter import ttk, messagebox
 from controllers.med_controller import obtener_horarios_disponibles, agregar_horario_disponible, eliminar_horario_disponible
 
+DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+
 class HorariosFrame(Frame):
     def __init__(self, parent, medico_id):
         super().__init__(parent)
-        self.parent = parent
+
+        print(f"DEBUG: HorariosFrame recibido con medico_id: {medico_id}")
         self.medico_id = medico_id
 
-        # Título
         Label(self, text="Horarios Disponibles", font=("Arial", 16, "bold")).pack(pady=10)
 
-        # Frame del formulario
         form_frame = Frame(self)
         form_frame.pack(pady=10)
 
-        # Día de la semana
-        Label(form_frame, text="Día (0=Domingo, 6=Sábado):").grid(row=0, column=0, sticky="e")
-        self.entry_dia = Entry(form_frame, width=5)
-        self.entry_dia.grid(row=0, column=1, padx=5)
+        # Día + Hora Inicio + Hora Fin (todo alineado horizontalmente)
+        Label(form_frame, text="Día:").grid(row=0, column=0, sticky="e")
+        self.dia_var = StringVar()
+        self.combo_dia = ttk.Combobox(form_frame, textvariable=self.dia_var, values=DIAS_SEMANA, state="readonly", width=10)
+        self.combo_dia.grid(row=0, column=1, padx=5)
+        self.combo_dia.current(0)
 
-        # Hora inicio
-        Label(form_frame, text="Hora Inicio (HH:MM):").grid(row=1, column=0, sticky="e")
-        self.entry_inicio = Entry(form_frame, width=10)
-        self.entry_inicio.grid(row=1, column=1, padx=5)
+        Label(form_frame, text="Hora Inicio:").grid(row=0, column=2, sticky="e")
+        self.hora_inicio_hh = StringVar()
+        self.hora_inicio_mm = StringVar()
+        ttk.Combobox(form_frame, textvariable=self.hora_inicio_hh, values=[f"{i:02d}" for i in range(24)],
+                     width=3, state="readonly").grid(row=0, column=3)
+        Label(form_frame, text=":").grid(row=0, column=4)
+        ttk.Combobox(form_frame, textvariable=self.hora_inicio_mm, values=["00", "15", "30", "45"],
+                     width=3, state="readonly").grid(row=0, column=5, padx=(0, 10))
 
-        # Hora fin
-        Label(form_frame, text="Hora Fin (HH:MM):").grid(row=2, column=0, sticky="e")
-        self.entry_fin = Entry(form_frame, width=10)
-        self.entry_fin.grid(row=2, column=1, padx=5)
+        Label(form_frame, text="Hora Fin:").grid(row=0, column=6, sticky="e")
+        self.hora_fin_hh = StringVar()
+        self.hora_fin_mm = StringVar()
+        ttk.Combobox(form_frame, textvariable=self.hora_fin_hh, values=[f"{i:02d}" for i in range(24)],
+                     width=3, state="readonly").grid(row=0, column=7)
+        Label(form_frame, text=":").grid(row=0, column=8)
+        ttk.Combobox(form_frame, textvariable=self.hora_fin_mm, values=["00", "15", "30", "45"],
+                     width=3, state="readonly").grid(row=0, column=9)
 
         # Botón agregar
-        Button(form_frame, text="Agregar Horario", command=self.agregar_horario).grid(row=3, column=0, columnspan=2, pady=10)
+        Button(form_frame, text="Agregar Horario", command=self.agregar_horario).grid(row=1, column=0, columnspan=10, pady=10)
 
-        # Tabla de horarios
+        # Tabla
         self.tree = ttk.Treeview(self, columns=("dia", "inicio", "fin"), show="headings", height=8)
         self.tree.heading("dia", text="Día")
         self.tree.heading("inicio", text="Hora Inicio")
@@ -51,20 +62,30 @@ class HorariosFrame(Frame):
         self.tree.delete(*self.tree.get_children())
         horarios = obtener_horarios_disponibles(self.medico_id)
         for h in horarios:
-            self.tree.insert("", "end", iid=h["id"], values=(h["dia_semana"], h["hora_inicio"], h["hora_fin"]))
+            nombre_dia = DIAS_SEMANA[h["dia_semana"]] if 0 <= h["dia_semana"] <= 6 else f"Desconocido ({h['dia_semana']})"
+            self.tree.insert("", "end", iid=h["id"], values=(nombre_dia, h["hora_inicio"], h["hora_fin"]))
 
     def agregar_horario(self):
         try:
-            dia = int(self.entry_dia.get())
-            inicio = self.entry_inicio.get()
-            fin = self.entry_fin.get()
+            dia_nombre = self.dia_var.get()
+            dia_num = DIAS_SEMANA.index(dia_nombre)
 
-            if not (0 <= dia <= 6):
-                raise ValueError("El día debe estar entre 0 y 6")
+            hi = f"{self.hora_inicio_hh.get()}:{self.hora_inicio_mm.get()}"
+            hf = f"{self.hora_fin_hh.get()}:{self.hora_fin_mm.get()}"
 
-            agregar_horario_disponible(self.medico_id, dia, inicio, fin)
+            if not all([self.hora_inicio_hh.get(), self.hora_inicio_mm.get(),
+                        self.hora_fin_hh.get(), self.hora_fin_mm.get()]):
+                raise ValueError("Debe seleccionar horas y minutos para ambos campos.")
+
+            hi_total = int(self.hora_inicio_hh.get()) * 60 + int(self.hora_inicio_mm.get())
+            hf_total = int(self.hora_fin_hh.get()) * 60 + int(self.hora_fin_mm.get())
+            if hi_total >= hf_total:
+                raise ValueError("La hora de inicio debe ser menor a la de fin.")
+
+            agregar_horario_disponible(self.medico_id, dia_num, hi, hf)
             self.cargar_horarios()
             messagebox.showinfo("Éxito", "Horario agregado correctamente.")
+
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo agregar el horario:\n{e}")
 
