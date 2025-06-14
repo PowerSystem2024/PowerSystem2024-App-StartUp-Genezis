@@ -77,7 +77,7 @@ class App(tk.Tk):
             self.current_frame = AdminDashboard(self, self.current_user)
         elif user_type == "medico":
             from ui.medicos.dashboard import MedicoDashboard
-            self.current_frame = MedicoDashboard(self, self.current_user)
+            self.current_frame = MedicoDashboard(self, self.current_user["id"])
         elif user_type == "paciente":
             from ui.pacientes.dashboard import PacienteDashboard
             self.current_frame = PacienteDashboard(self, paciente_id=self.current_user['id'])
