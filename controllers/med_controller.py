@@ -1,9 +1,7 @@
-# controllers/med_controller.py
-
 import os
 from dotenv import load_dotenv
 from supabase import create_client
-from utils.date_utils import fecha_hora_actual_utc  # Importamos la función utilitaria para obtener la fecha y hora actual en UTC en formato ISO
+from utils.date_utils import fecha_hora_actual_utc
 
 # Cargar variables de entorno
 load_dotenv()
@@ -24,7 +22,6 @@ def crear_medico(usuario_id, institucion_id, especialidad, matricula, duracion_t
         "especialidad": especialidad,
         "matricula": matricula,
         "duracion_turno": duracion_turno,
-        # Usamos la función utilitaria para asignar la fecha y hora actual UTC en formato ISO
         "creado_en": fecha_hora_actual_utc()
     }
     return supabase.table("medicos").insert(data).execute().data
@@ -35,13 +32,17 @@ def obtener_medicos():
 
 
 def actualizar_medico(medico_id, nuevos_datos):
-    # Actualizamos la fecha y hora de la última modificación usando la función utilitaria
     nuevos_datos["actualizado_en"] = fecha_hora_actual_utc()
     return supabase.table("medicos").update(nuevos_datos).eq("id", medico_id).execute().data
 
 
 def eliminar_medico(medico_id):
     return supabase.table("medicos").delete().eq("id", medico_id).execute().data
+
+
+def obtener_medico_por_usuario(usuario_id):
+    resultado = supabase.table("medicos").select("*").eq("usuario_id", usuario_id).single().execute()
+    return resultado.data if resultado.data else None
 
 
 # ================================
@@ -62,7 +63,6 @@ def completar_turno(turno_id, notas_consulta):
         .update({
         "estado": "completado",
         "notas": notas_consulta,
-        # Actualizamos la fecha y hora de la modificación con la función utilitaria
         "actualizado_en": fecha_hora_actual_utc()
     }) \
         .eq("id", turno_id).execute().data
@@ -72,7 +72,6 @@ def cancelar_turno(turno_id):
     return supabase.table("turnos") \
         .update({
         "estado": "cancelado",
-        # Actualizamos la fecha y hora de la modificación con la función utilitaria
         "actualizado_en": fecha_hora_actual_utc()
     }) \
         .eq("id", turno_id).execute().data
@@ -89,7 +88,6 @@ def agregar_horario_disponible(medico_id, dia_semana, hora_inicio, hora_fin):
         "hora_inicio": hora_inicio,
         "hora_fin": hora_fin,
         "activo": True,
-        # Usamos la función utilitaria para guardar la fecha y hora actual en UTC
         "creado_en": fecha_hora_actual_utc()
     }
     return supabase.table("horarios_disponibles").insert(data).execute().data
@@ -110,17 +108,8 @@ def obtener_horarios_disponibles(medico_id):
 # ================================
 
 def obtener_pacientes_por_medico(medico_id):
-    # Busca pacientes únicos que hayan tenido turnos con este médico
-    query = """
-        SELECT DISTINCT p.*
-        FROM turnos t
-        JOIN pacientes p ON t.paciente_id = p.id
-        WHERE t.medico_id = %s
-    """
-    # Como no usamos SQL directo, obtenemos IDs únicos de pacientes desde los turnos
     turnos = supabase.table("turnos").select("paciente_id").eq("medico_id", medico_id).execute().data
     paciente_ids = list(set([t["paciente_id"] for t in turnos]))
-
     pacientes = []
     for pid in paciente_ids:
         paciente = supabase.table("pacientes").select("*").eq("id", pid).single().execute().data
