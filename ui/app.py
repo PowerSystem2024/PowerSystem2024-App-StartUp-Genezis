@@ -66,26 +66,47 @@ class App(tk.Tk):
         # Mostrar el panel correspondiente según el tipo de usuario
         self.show_dashboard(user["tipo"])
 
-
     def show_dashboard(self, user_type):
         """Mostrar el dashboard según el tipo de usuario"""
         if self.current_frame:
             self.current_frame.destroy()
-        
+            self.current_frame = None  # Buena práctica para limpiar la referencia
+
         if user_type == "admin":
             from ui.admin.dashboard import AdminDashboard
             self.current_frame = AdminDashboard(self, self.current_user)
+
         elif user_type == "medico":
+            # ====> LA SOLUCIÓN ESTÁ AQUÍ <====
             from ui.medicos.dashboard import MedicoDashboard
-            self.current_frame = MedicoDashboard(self, self.current_user["id"])
+            from controllers.med_controller import obtener_medico_id_por_usuario_id  # 1. Importamos la función
+
+            usuario_id = self.current_user["id"]
+
+            # 2. Usamos la función para "traducir" el ID de usuario al ID de médico
+            medico_id_real = obtener_medico_id_por_usuario_id(usuario_id)
+
+            if medico_id_real:
+                # 3. Si encontramos el ID, lo pasamos al dashboard. ¡Este es el ID correcto!
+                self.current_frame = MedicoDashboard(self, medico_id_real)
+            else:
+                # 4. Si no, significa que algo anda mal (un usuario tipo 'medico' sin perfil de médico).
+                #    Mostramos un error y no cargamos el dashboard.
+                messagebox.showerror("Error de Perfil",
+                                     "Este usuario está marcado como médico, pero no tiene un perfil de médico asociado.")
+                self.logout()  # Cerramos sesión para evitar inconsistencias
+
         elif user_type == "paciente":
             from ui.pacientes.dashboard import PacienteDashboard
             self.current_frame = PacienteDashboard(self, self.current_user)
+
         elif user_type == "institucion":
             from ui.institucion.dashboard import InstitucionMainDashboard
             self.current_frame = InstitucionMainDashboard(self, self.current_user)
-        
-        self.current_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Empaquetamos el frame solo si se creó uno
+        if self.current_frame:
+            self.current_frame.pack(fill=tk.BOTH, expand=True)
     
     def logout(self):
         """Cerrar sesión"""
