@@ -1,7 +1,6 @@
 from tkinter import *
 from tkinter import messagebox
 
-from controllers.pac_controller import obtener_historial_turnos, confirmar_turno, cancelar_turno, reservar_turno, buscar_turnos_disponibles
 from ui.pacientes.buscar_turnos import BuscarTurnosFrame
 from ui.pacientes.historial_turnos import HistorialTurnosFrame
 from ui.pacientes.reservar_turnos import ReservarTurnosFrame
@@ -40,7 +39,19 @@ class TurnosPacienteFrame(Frame):
 
     def ver_historial(self):
         self.limpiar_subframe()
-        self.current_subframe = HistorialTurnosFrame(self.subframe_container, self.paciente_id, volver_callback=self.mostrar_dashboard)
+
+        # Convertir el usuario_id en paciente_id
+        paciente_id = obtener_paciente_id_por_usuario(self.paciente_id)  # <- aquí estaba el error de concepto
+
+        if not paciente_id:
+            messagebox.showerror("Error", "No se encontró el paciente asociado al usuario.")
+            return
+
+        self.current_subframe = HistorialTurnosFrame(
+            self.subframe_container,
+            paciente_id,
+            volver_callback=self.mostrar_dashboard
+        )
         self.current_subframe.pack(fill=BOTH, expand=True)
 
     def reservar_turno(self):

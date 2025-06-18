@@ -1,5 +1,6 @@
 from tkinter import *
-from tkinter import ttk, messagebox
+from tkinter import messagebox, ttk
+from datetime import datetime
 from controllers.pac_controller import obtener_historial_turnos, cancelar_turno
 
 class CancelarTurnosFrame(Frame):
@@ -10,27 +11,21 @@ class CancelarTurnosFrame(Frame):
         self.turnos_proximos = []
 
         Label(self, text="Cancelar Turno", font=("Arial", 16, "bold")).pack(pady=10)
+        Label(self, text="Seleccione un turno para cancelar", font=("Arial", 11)).pack(pady=(0, 10))
 
-        self.tree = ttk.Treeview(
-            self,
-            columns=("fecha", "hora_inicio", "nombre_medico", "especialidad"),
-            show='headings',
-            height=10
-        )
-
+        columns = ("fecha", "hora", "medico", "especialidad")
+        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=10)
         self.tree.heading("fecha", text="Fecha")
-        self.tree.heading("hora_inicio", text="Hora Inicio")
-        self.tree.heading("nombre_medico", text="Médico")
+        self.tree.heading("hora", text="Hora")
+        self.tree.heading("medico", text="Médico")
         self.tree.heading("especialidad", text="Especialidad")
 
-        self.tree.column("fecha", anchor="center", width=100)
-        self.tree.column("hora_inicio", anchor="center", width=100)
-        self.tree.column("nombre_medico", anchor="center", width=200)
-        self.tree.column("especialidad", anchor="center", width=150)
+        for col in columns:
+            self.tree.column(col, anchor="center", width=150)
 
-        self.tree.pack(padx=10, pady=10)
+        self.tree.pack(pady=10, padx=10, fill=X)
 
-        Button(self, text="Cancelar Turno Seleccionado", command=self.cancelar_turno_seleccionado).pack(pady=5)
+        self.tree.bind("<Double-1>", self.on_double_click)
 
         self.cargar_turnos()
 
@@ -47,36 +42,43 @@ class CancelarTurnosFrame(Frame):
             return
 
         if not self.turnos_proximos:
-            messagebox.showinfo("Sin turnos", "No hay turnos próximos disponibles.")
+            messagebox.showinfo("Información", "No hay turnos próximos disponibles.")
             return
 
-        for turno in self.turnos_proximos:
-            fecha = turno.get("fecha", "")[:10]
+        for i, turno in enumerate(self.turnos_proximos):
+            fecha_raw = turno.get("fecha", "")[:10]
+            try:
+                fecha = datetime.strptime(fecha_raw, "%Y-%m-%d").strftime("%d-%m-%Y")
+            except ValueError:
+                fecha = fecha_raw
+
             hora = turno.get("hora_inicio", "")
-            medico = turno.get("nombre_medico", "Desconocido")
-            especialidad = turno.get("especialidad", "Desconocida")
 
-            self.tree.insert("", "end", values=(fecha, hora, medico, especialidad))
+            medico_info = turno.get("medico", {})
+            usuario_info = medico_info.get("usuario", {})
+            nombre = usuario_info.get("nombre", "").strip()
+            apellido = usuario_info.get("apellido", "").strip()
+            nombre_medico = f"Dr. {nombre} {apellido}".strip() if nombre or apellido else "Desconocido"
+            especialidad = medico_info.get("especialidad", "No especificada")
 
-    def cancelar_turno_seleccionado(self):
-        seleccion = self.tree.selection()
-        if not seleccion:
-            messagebox.showwarning("Atención", "Por favor, seleccioná un turno para cancelar.")
+            self.tree.insert("", END, iid=i, values=(fecha, hora, nombre_medico, especialidad))
+
+    def on_double_click(self, event):
+        item_id = self.tree.identify_row(event.y)
+
+        if not item_id:
             return
 
-        item_id = seleccion[0]
-        index = self.tree.index(item_id)
-
+        index = int(item_id)
         if index >= len(self.turnos_proximos):
             return
 
         turno = self.turnos_proximos[index]
-        turno_id = turno["id"]
+        turno_id = turno.get("id")
 
-        confirmar = messagebox.askyesno("Confirmar", "¿Estás seguro que querés cancelar este turno?")
+        confirmar = messagebox.askyesno("Confirmar cancelación", "¿Estás seguro de que querés cancelar este turno?")
         if confirmar:
             resultado = cancelar_turno(turno_id, self.paciente_id)
-
             if resultado.get("exito"):
                 messagebox.showinfo("Éxito", resultado["mensaje"])
                 self.cargar_turnos()

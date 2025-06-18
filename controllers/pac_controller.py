@@ -223,19 +223,16 @@ def cancelar_turno(turno_id, paciente_id, motivo_cancelacion="Cancelado por el p
         dia_semana = fecha_obj.weekday()  # lunes=0, domingo=6
 
         nuevo_horario = {
-            "medico_id": turno["medico_id"],
+            "dia_semana": datetime.strptime(turno["fecha"], "%Y-%m-%d").weekday(),
             "hora_inicio": turno["hora_inicio"],
             "hora_fin": turno["hora_fin"],
-            "dia_semana": dia_semana,
-            "activo": True,
-            "institucion_id": turno.get("institucion_id"),
-            "creado_en": fecha_hora_actual_utc(),
-            "actualizado_en": fecha_hora_actual_utc()
+            "medico_id": turno["medico_id"],
+            "activo": True
         }
 
         supabase.table("horarios_disponibles").insert(nuevo_horario).execute()
 
-        return {"exito": True, "mensaje": "El turno fue cancelado correctamente y el horario fue liberado."}
+        return {"exito": True, "mensaje": "El turno fue cancelado correctamente."}
 
     except Exception as e:
         print("[ERROR] al cancelar turno:", e)
@@ -244,38 +241,26 @@ def cancelar_turno(turno_id, paciente_id, motivo_cancelacion="Cancelado por el p
 
 # Función para ver HISTORIAL de Turnos
 def obtener_historial_turnos(paciente_id):
-    # Turnos futuros (o del día), incluyendo nombre del médico y especialidad
+    relaciones = (
+        "id, fecha, hora_inicio, estado, "
+        "medico:medico_id("
+        "   especialidad, "
+        "   usuario:usuario_id(nombre, apellido)"
+        ")"
+    )
+
+    # Turnos futuros o del día (excluyendo cancelados)
     turnos_proximos = supabase.table("turnos") \
-        .select("""
-            id,
-            fecha,
-            hora_inicio,
-            estado,
-            medico_id,
-            medico:medicos (
-                nombre,
-                apellido,
-                especialidad:especialidades (
-                    nombre
-                )
-            )
-        """) \
+        .select(relaciones) \
         .eq("paciente_id", paciente_id) \
         .gte("fecha", fecha_hora_actual_utc()) \
         .neq("estado", "cancelado") \
         .order("fecha") \
         .execute().data
 
-    # Enriquecer los datos para el frontend
-    for turno in turnos_proximos:
-        medico = turno.get("medico", {})
-        especialidad = medico.get("especialidad", {})
-        turno["nombre_medico"] = f"{medico.get('nombre', '')} {medico.get('apellido', '')}".strip()
-        turno["especialidad"] = especialidad.get("nombre", "No especificada")
-
-    # Turnos pasados (sin join detallado por ahora)
+    # Turnos pasados (incluyendo cancelados)
     turnos_pasados = supabase.table("turnos") \
-        .select("id, fecha, hora_inicio, estado, medico_id") \
+        .select(relaciones) \
         .eq("paciente_id", paciente_id) \
         .lt("fecha", fecha_hora_actual_utc()) \
         .order("fecha", desc=True) \
@@ -285,6 +270,7 @@ def obtener_historial_turnos(paciente_id):
         "proximos": turnos_proximos,
         "pasados": turnos_pasados
     }
+
 
 
 def obtener_instituciones():

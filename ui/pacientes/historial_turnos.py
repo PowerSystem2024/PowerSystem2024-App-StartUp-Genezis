@@ -1,9 +1,7 @@
 from tkinter import *
-from tkcalendar import Calendar, dateentry
+from tkinter import ttk, messagebox
 from controllers.pac_controller import obtener_historial_turnos
 from datetime import datetime
-from tkinter import messagebox
-
 
 class HistorialTurnosFrame(Frame):
     def __init__(self, parent, paciente_id, volver_callback):
@@ -13,40 +11,56 @@ class HistorialTurnosFrame(Frame):
 
         Label(self, text="Historial de Turnos", font=("Arial", 16, "bold")).pack(pady=10)
 
-        # Calendario
-        self.calendario = Calendar(self, selectmode='day', date_pattern='yyyy-mm-dd')
-        self.calendario.pack(pady=10)
+        columns = ("fecha", "hora", "medico", "especialidad", "estado")
+        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=12)
 
-        Button(self, text="Ver Turnos del Día", command=self.mostrar_turnos_por_fecha).pack(pady=5)
+        self.tree.heading("fecha", text="Fecha")
+        self.tree.heading("hora", text="Hora")
+        self.tree.heading("medico", text="Médico")
+        self.tree.heading("especialidad", text="Especialidad")
+        self.tree.heading("estado", text="Estado")
 
-        # Lista de turnos
-        self.lista_turnos = Listbox(self, width=80, height=10)
-        self.lista_turnos.pack(pady=10)
+        for col in columns:
+            self.tree.column(col, anchor=CENTER, width=120)
 
-        # Botón atrás
+        self.tree.pack(pady=10, padx=10, fill=BOTH, expand=True)
+
         Button(self, text="Atrás", command=self.volver_callback).pack(pady=10)
 
-    def mostrar_turnos_por_fecha(self):
-        fecha_seleccionada = self.calendario.get_date()
+        self.cargar_historial_turnos()
 
-        # Simulación de turnos: reemplazar con lógica real
-        turnos_simulados = self.obtener_turnos_para_fecha(fecha_seleccionada)
+    def cargar_historial_turnos(self):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
 
-        self.lista_turnos.delete(0, END)  # Limpiar lista
+        try:
+            historial = obtener_historial_turnos(self.paciente_id)
+            turnos = historial.get("proximos", []) + historial.get("pasados", [])
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudieron cargar los turnos: {e}")
+            return
 
-        if not turnos_simulados:
-            self.lista_turnos.insert(END, "No hay turnos en esta fecha.")
-        else:
-            for turno in turnos_simulados:
-                self.lista_turnos.insert(END, f"{turno['fecha']} - {turno['especialidad']} con {turno['medico']}")
+        if not turnos:
+            messagebox.showinfo("Información", "No se encontraron turnos en el historial.")
+            return
 
-    def obtener_turnos_para_fecha(self, fecha):
-        """Simula obtención de turnos por fecha. Reemplazar por consulta real."""
-        todos_los_turnos = [
-            {"fecha": "2025-05-10", "especialidad": "Cardiología", "medico": "Dr. Gómez"},
-            {"fecha": "2025-05-28", "especialidad": "Odontología", "medico": "Dra. Pérez"},
-            {"fecha": "2025-05-28", "especialidad": "Clínica Médica", "medico": "Dr. Salas"},
-            {"fecha": "2025-06-01", "especialidad": "Dermatología", "medico": "Dra. López"},
-        ]
+        for turno in turnos:
+            # Fecha con formato DD-MM-YYYY
+            fecha_raw = turno.get("fecha", "")[:10]
+            try:
+                fecha = datetime.strptime(fecha_raw, "%Y-%m-%d").strftime("%d-%m-%Y")
+            except ValueError:
+                fecha = fecha_raw
 
-        return [turno for turno in todos_los_turnos if turno["fecha"] == fecha]
+            hora = turno.get("hora_inicio", "")
+
+            medico_info = turno.get("medico", {})
+            usuario_info = medico_info.get("usuario", {})
+            nombre = usuario_info.get("nombre", "").strip()
+            apellido = usuario_info.get("apellido", "").strip()
+            nombre_medico = f"Dr. {nombre} {apellido}".strip() if nombre or apellido else "Desconocido"
+
+            especialidad = medico_info.get("especialidad", "No especificada")
+            estado = turno.get("estado", "Desconocido")
+
+            self.tree.insert("", END, values=(fecha, hora, nombre_medico, especialidad, estado))
