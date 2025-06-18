@@ -1,10 +1,13 @@
 from tkinter import *
+from tkinter import messagebox
+
 from controllers.pac_controller import obtener_historial_turnos, confirmar_turno, cancelar_turno, reservar_turno, buscar_turnos_disponibles
 from ui.pacientes.buscar_turnos import BuscarTurnosFrame
 from ui.pacientes.historial_turnos import HistorialTurnosFrame
 from ui.pacientes.reservar_turnos import ReservarTurnosFrame
 from ui.pacientes.confirmar_turnos import ConfirmarTurnoFrame
 from ui.pacientes.cancelar_turnos import CancelarTurnosFrame
+from controllers.pac_controller import obtener_paciente_id_por_usuario
 class TurnosPacienteFrame(Frame):
     def __init__(self, parent, paciente_id, volver_callback):
         super().__init__(parent)
@@ -52,8 +55,15 @@ class TurnosPacienteFrame(Frame):
 
     def cancelar_turno(self):
         self.limpiar_subframe()
-        self.current_subframe = CancelarTurnosFrame(self.subframe_container, self.paciente_id)
-        self.current_subframe.pack(fill=BOTH, expand=True)
+
+        # Obtener el paciente_id a partir del usuario_id
+        paciente_id = obtener_paciente_id_por_usuario(self.paciente_id)  # self.paciente_id en realidad es usuario_id
+
+        if paciente_id:
+            self.current_subframe = CancelarTurnosFrame(self.subframe_container, paciente_id)
+            self.current_subframe.pack(fill=BOTH, expand=True)
+        else:
+            messagebox.showerror("Error", "No se encontró un paciente asociado a este usuario.")
 
     def buscar_turnos(self):
         self.limpiar_subframe()
@@ -68,6 +78,8 @@ class TurnosPacienteFrame(Frame):
 
     def mostrar_dashboard(self):
         self.limpiar_subframe()
+
+
 
 
 
