@@ -5,12 +5,14 @@ from controllers.pac_controller import get_paciente_por_usuario_id
 class PerfilFrame(Frame):
     def __init__(self, parent, paciente_id=None, volver_callback=None):
         super().__init__(parent)
+        self.paciente_data = None
         self.paciente_id = paciente_id
         self.volver_callback = volver_callback
         self.modo_edicion = False
 
         # Título
-        Label(self, text="Perfil del Paciente", font=("Arial", 16, "bold")).grid(row=0, column=0, columnspan=2, pady=10)
+        self.label_titulo = Label(self, text="Perfil del Paciente", font=("Arial", 16, "bold"))
+        self.label_titulo.grid(row=0, column=0, columnspan=2, pady=10)
 
         # Campos para completar
         self.campos = {
@@ -88,6 +90,9 @@ class PerfilFrame(Frame):
         if paciente:
             self.paciente_id = paciente["id"]  # Guardamos el ID real del paciente
             self.cargar_datos(paciente)
+            self.paciente_data = paciente
+            self.label_titulo.config(text=f"Perfil de {paciente['nombre']} {paciente['apellido']}")
+
         else:
             messagebox.showerror("Error", "No se pudieron cargar los datos del paciente.")
 
