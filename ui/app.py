@@ -85,7 +85,6 @@ class App(tk.Tk):
 
             # 2. Usamos la función para "traducir" el ID de usuario al ID de médico
             medico_id_real = obtener_medico_id_por_usuario_id(usuario_id)
-
             if medico_id_real:
                 # 3. Si encontramos el ID, lo pasamos al dashboard. ¡Este es el ID correcto!
                 self.current_frame = MedicoDashboard(self, medico_id_real)
@@ -93,8 +92,20 @@ class App(tk.Tk):
                 # 4. Si no, significa que algo anda mal (un usuario tipo 'medico' sin perfil de médico).
                 #    Mostramos un error y no cargamos el dashboard.
                 messagebox.showerror("Error de Perfil",
-                                     "Este usuario está marcado como médico, pero no tiene un perfil de médico asociado.")
-                self.logout()  # Cerramos sesión para evitar inconsistencias
+                                     "Este usuario no está registrado en ninguna institución, comunicarse con administración.")
+
+                # Crear un pequeño frame con un botón "Volver al Inicio de Sesión"
+                error_frame = tk.Frame(self)
+                error_frame.pack(fill=tk.BOTH, expand=True)
+
+                tk.Label(error_frame, text="Perfil inválido", font=("Arial", 14)).pack(pady=20)
+                tk.Button(error_frame, text="Volver al Inicio de Sesión", font=("Arial", 12),
+                          command=lambda: [error_frame.destroy(), self.show_login()]).pack(pady=10)
+
+                # Limpiamos cualquier indicador de sesión para mayor seguridad
+                self.current_user = None
+                self.current_frame = error_frame
+
 
         elif user_type == "paciente":
             from ui.pacientes.dashboard import PacienteDashboard
