@@ -34,6 +34,32 @@ def create_paciente(usuario_id, fecha_nacimiento, genero, telefono, obra_social,
 def get_paciente():
     return supabase.table("pacientes").select("*").execute().data
 
+
+# Funcion para traer los datos del paciente
+def get_paciente_por_usuario_id(usuario_id):
+    try:
+        # Traer datos del paciente desde la tabla pacientes
+        paciente_response = supabase.table("pacientes").select("*").eq("usuario_id", usuario_id).execute()
+
+        if not paciente_response.data or len(paciente_response.data) != 1:
+            print("Paciente no encontrado.")
+            return None
+
+        paciente = paciente_response.data[0]
+
+        # Traer datos desde la tabla usuarios para completar nombre y apellido
+        usuario_response = supabase.table("usuarios").select("nombre, apellido").eq("id", usuario_id).execute()
+
+        if usuario_response.data:
+            paciente["nombre"] = usuario_response.data[0]["nombre"]
+            paciente["apellido"] = usuario_response.data[0]["apellido"]
+
+        return paciente
+
+    except Exception as e:
+        print("Error al obtener paciente desde Supabase:", e)
+        return None
+
 # Función para actualizar los datos de un paciente:
 def update_paciente(paciente_id, nuevos_datos):
     nuevos_datos["actualizado_en"] = fecha_hora_actual_utc()

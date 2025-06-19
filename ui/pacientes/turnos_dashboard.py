@@ -12,7 +12,8 @@ class TurnosPacienteFrame(Frame):
         super().__init__(parent)
         self.current_subframe = None
         self.parent = parent
-        self.paciente_id = paciente_id["id"]
+        self.paciente_id = paciente_id
+
         self.volver_callback = volver_callback
 
         Label(self, text="Gestión de Turnos", font=("Arial", 18, "bold")).pack(pady=10)

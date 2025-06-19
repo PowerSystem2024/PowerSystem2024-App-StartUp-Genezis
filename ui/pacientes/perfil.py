@@ -1,7 +1,6 @@
 from tkinter import *
 from tkinter import messagebox
-from utils.sesion import usuario_actual
-
+from controllers.pac_controller import get_paciente_por_usuario_id
 
 class PerfilFrame(Frame):
     def __init__(self, parent, paciente_id=None, volver_callback=None):
@@ -54,7 +53,7 @@ class PerfilFrame(Frame):
             row=len(self.campos) + 3, column=0, columnspan=2, pady=5
         )
 
-        self.cargar_datos(usuario_actual)
+        self.obtener_datos_desde_supabase(self.paciente_id)
 
 
     def cargar_datos(self, paciente):
@@ -84,5 +83,11 @@ class PerfilFrame(Frame):
         self.modo_edicion = True
         self.btn_guardar.grid(row=len(self.campos) + 1, column=0, columnspan=2, pady=10)
 
-
+    def obtener_datos_desde_supabase(self, usuario_id):
+        paciente = get_paciente_por_usuario_id(usuario_id)
+        if paciente:
+            self.paciente_id = paciente["id"]  # Guardamos el ID real del paciente
+            self.cargar_datos(paciente)
+        else:
+            messagebox.showerror("Error", "No se pudieron cargar los datos del paciente.")
 
