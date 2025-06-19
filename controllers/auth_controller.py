@@ -2,30 +2,52 @@
 
 import hashlib
 from database.db_manager import DatabaseManager
-from utils.security_utils import hash_password, verify_password
+from utils.security_utils import hash_password, verify_password  # Asegúrate de que verify_password esté aquí
 
 
 class AuthController:
     """Controlador para la autenticación y gestión de usuarios/pacientes."""
 
     def __init__(self):
-        # Es una buena práctica obtener las tablas una sola vez si las usarás mucho.
         db = DatabaseManager()
         self.user_table = db.get_table("usuarios")
         self.patient_table = db.get_table("pacientes")
 
-    # ... (tu método login y _update_password_hash se mantienen igual) ...
     def login(self, email: str, password: str):
-        # ... sin cambios aquí ...
+        """
+        Verifica las credenciales de un usuario.
+        """
+        # 1. Busca un usuario con el email proporcionado.
         result = self.user_table.select("*").eq("email", email).limit(1).execute()
-        # ... resto del código sin cambios ...
+
+        # 2. Si se encontró un usuario, ahora verifica la contraseña.
+        if result.data:
+            user = result.data[0]
+            stored_password_hash = user['password']  # Obtiene el hash de la contraseña desde la BD
+
+            # 3. Compara la contraseña del formulario con el hash almacenado.  <--- CAMBIO CLAVE AQUÍ
+            if verify_password(password, stored_password_hash):
+                # Si la contraseña es correcta, devuelve los datos del usuario.
+
+                # Opcional: Si todavía tienes contraseñas en MD5, puedes migrarlas aquí.
+                # Esta lógica detecta si el hash no es de bcrypt y lo actualiza.
+                if stored_password_hash.startswith("$2b$") is False:
+                    print(f"Migrando contraseña para el usuario: {user['id']}")
+                    self._update_password_hash(user['id'], password)
+
+                return user
+
+        # 4. Si el email no se encontró O la contraseña no coincidió, devuelve None.
         return None
 
     def _update_password_hash(self, user_id, plain_password):
-        # ... sin cambios aquí ...
+        """Actualiza el hash de la contraseña de un usuario a bcrypt."""
         new_hashed_password = hash_password(plain_password)
         self.user_table.update({"password": new_hashed_password}).eq("id", user_id).execute()
         print(f"Contraseña del usuario {user_id} migrada exitosamente a bcrypt.")
+
+    # --- Tus otros métodos (register_user_and_paciente, etc.) se mantienen igual ---
+    # (El resto de tu código es correcto y maneja bien el registro)
 
     def register_user_and_paciente(self, user_data: dict, paciente_data: dict):
         """
@@ -81,8 +103,6 @@ class AuthController:
             print(f"Ocurrió un error al crear el paciente: {e}")
             return None
 
-    # El método register original puede quedar obsoleto o puedes mantenerlo
-    # para registrar usuarios que no sean pacientes (ej. administradores)
     def register(self, user_data: dict):
         """Registra un nuevo usuario genérico."""
         plain_password = user_data["password"]
