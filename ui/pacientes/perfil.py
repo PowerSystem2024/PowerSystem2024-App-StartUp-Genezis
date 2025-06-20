@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import messagebox
-from controllers.pac_controller import get_paciente_por_usuario_id
+from controllers.pac_controller import get_paciente_por_usuario_id, update_paciente
+
 
 class PerfilFrame(Frame):
     def __init__(self, parent, paciente_id=None, volver_callback=None):
@@ -19,6 +20,7 @@ class PerfilFrame(Frame):
             "Nombres": StringVar(),
             "Apellidos": StringVar(),
             "Fecha de Nacimiento": StringVar(),
+            "Teléfono": StringVar(),
             "Género": StringVar(),
             "Obra Social / Seguro": StringVar(),
             "Número de Afiliado": StringVar(),
@@ -62,6 +64,7 @@ class PerfilFrame(Frame):
             self.campos["Nombres"].set(paciente.get("nombre", ""))
             self.campos["Apellidos"].set(paciente.get("apellido", ""))
             self.campos["Fecha de Nacimiento"].set(paciente.get("fecha_nacimiento", ""))
+            self.campos["Teléfono"].set(paciente.get("telefono", ""))
             self.campos["Género"].set(paciente.get("genero", ""))
             self.campos["Obra Social / Seguro"].set(paciente.get("obra_social", ""))
             self.campos["Número de Afiliado"].set(paciente.get("num_afiliado", ""))
@@ -71,13 +74,37 @@ class PerfilFrame(Frame):
         return {campo: var.get() for campo, var in self.campos.items()}
 
     def guardar_cambios(self):
+        if not self.paciente_id:
+            messagebox.showerror("Error", "ID de paciente no encontrado.")
+            return
+
         datos = self.obtener_datos()
-        print("Simulando guardado:", datos)
-        messagebox.showinfo("Guardar", "¡Datos actualizados correctamente!")
+
+        nuevos_datos = {
+            "fecha_nacimiento": datos["Fecha de Nacimiento"],
+            "genero": datos["Género"],
+            "obra_social": datos["Obra Social / Seguro"],
+            "telefono": datos["Teléfono"]
+        }
+
+        try:
+            update_paciente(self.paciente_id, nuevos_datos)
+            messagebox.showinfo("Éxito", "¡Datos actualizados correctamente!")
+
+            # Desactivar todos los campos después del guardado
+            for campo, entry in self.entries.items():
+                entry.config(state=DISABLED)
+
+            self.btn_guardar.grid_remove()
+            self.modo_edicion = False
+
+        except Exception as e:
+            print("Error al actualizar paciente:", e)
+            messagebox.showerror("Error", "No se pudieron guardar los cambios.")
 
     def habilitar_edicion(self):
         campos_editables = [
-            "Nombres", "Apellidos", "Fecha de Nacimiento",
+            "Nombres", "Apellidos", "Fecha de Nacimiento", "Teléfono",
             "Género", "Obra Social / Seguro"
         ]
         for campo in campos_editables:
