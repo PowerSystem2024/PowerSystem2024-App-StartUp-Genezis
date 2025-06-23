@@ -12,7 +12,7 @@ class HistorialTurnosFrame(Frame):
         Label(self, text="Historial de Turnos", font=("Arial", 16, "bold")).pack(pady=10)
 
         columns = ("fecha", "hora", "medico", "especialidad", "estado")
-        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=12)
+        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=5)  # ← Cambiado de 12 a 5
 
         self.tree.heading("fecha", text="Fecha")
         self.tree.heading("hora", text="Hora")
@@ -23,9 +23,9 @@ class HistorialTurnosFrame(Frame):
         for col in columns:
             self.tree.column(col, anchor=CENTER, width=120)
 
-        self.tree.pack(pady=10, padx=10, fill=BOTH, expand=True)
+        self.tree.pack(pady=(5, 10), padx=10)  # ← Eliminado expand=True para evitar que se estire
 
-        Button(self, text="Atrás", command=self.volver_callback).pack(pady=10)
+        Button(self, text="Atrás", command=self.volver_callback).pack(pady=5)
 
         self.cargar_historial_turnos()
 
