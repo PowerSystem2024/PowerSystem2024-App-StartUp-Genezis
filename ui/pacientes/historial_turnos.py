@@ -35,7 +35,8 @@ class HistorialTurnosFrame(Frame):
 
         try:
             historial = obtener_historial_turnos(self.paciente_id)
-            turnos = historial.get("proximos", []) + historial.get("pasados", [])
+            turnos = historial.get("proximos", []) + historial.get("pasados", []) + historial.get("cancelados", [])
+
         except Exception as e:
             messagebox.showerror("Error", f"No se pudieron cargar los turnos: {e}")
             return
