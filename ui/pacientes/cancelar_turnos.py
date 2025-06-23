@@ -4,10 +4,11 @@ from datetime import datetime
 from controllers.pac_controller import obtener_historial_turnos, cancelar_turno
 
 class CancelarTurnosFrame(Frame):
-    def __init__(self, parent, paciente_id):
+    def __init__(self, parent, paciente_id, volver_callback):
         super().__init__(parent)
         self.parent = parent
         self.paciente_id = paciente_id
+        self.volver_callback = volver_callback
         self.turnos_proximos = []
 
         Label(self, text="Cancelar Turno", font=("Arial", 16, "bold")).pack(pady=10)
@@ -24,8 +25,10 @@ class CancelarTurnosFrame(Frame):
             self.tree.column(col, anchor="center", width=150)
 
         self.tree.pack(pady=10, padx=10, fill=X)
-
         self.tree.bind("<Double-1>", self.on_double_click)
+
+        # Botón Atrás
+        Button(self, text="Atrás", command=self.volver_atras).pack(pady=10)
 
         self.cargar_turnos()
 
@@ -65,7 +68,6 @@ class CancelarTurnosFrame(Frame):
 
     def on_double_click(self, event):
         item_id = self.tree.identify_row(event.y)
-
         if not item_id:
             return
 
@@ -84,3 +86,8 @@ class CancelarTurnosFrame(Frame):
                 self.cargar_turnos()
             else:
                 messagebox.showerror("Error", resultado.get("error", "No se pudo cancelar el turno."))
+
+    def volver_atras(self):
+        self.destroy()
+        if self.volver_callback:
+            self.volver_callback()
