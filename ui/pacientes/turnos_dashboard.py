@@ -22,7 +22,6 @@ class TurnosPacienteFrame(Frame):
         Label(self.menu_container, text="Gestión de Turnos", font=("Arial", 18, "bold")).pack(pady=10)
         Button(self.menu_container, text="Agendar un turno", width=30, command=self.buscar_turnos).pack(pady=5)
         Button(self.menu_container, text="Historial de Turnos", width=30, command=self.ver_historial).pack(pady=5)
-        Button(self.menu_container, text="Confirmar Turno", width=30, command=self.confirmar_turno).pack(pady=5)
         Button(self.menu_container, text="Cancelar Turno", width=30, command=self.cancelar_turno).pack(pady=5)
         Button(self.menu_container, text="Atrás", width=30, command=self.volver_callback).pack(pady=20)
 

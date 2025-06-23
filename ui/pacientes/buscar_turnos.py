@@ -165,7 +165,23 @@ class BuscarTurnosFrame(Frame):
             return
 
         for turno in self.resultados:
-            self.tree.insert("", "end", iid=turno["id"], values=(turno["nombre_medico"], turno["fecha"], turno["hora_inicio"], turno["hora_fin"]))
+            # 🔹 Formatear fecha
+            fecha_raw = turno["fecha"][:10]
+            try:
+                fecha_formateada = datetime.strptime(fecha_raw, "%Y-%m-%d").strftime("%d-%m-%Y")
+            except ValueError:
+                fecha_formateada = fecha_raw
+
+            # 🔹 Agregar prefijo "Dr." al nombre
+            nombre_medico = f"Dr. {turno['nombre_medico']}".strip()
+
+            self.tree.insert("", "end", iid=turno["id"], values=(
+                nombre_medico,
+                fecha_formateada,
+                turno["hora_inicio"],
+                turno["hora_fin"]
+            ))
+
         self.tree.pack()
 
     def volver_atras(self):

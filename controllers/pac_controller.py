@@ -275,7 +275,6 @@ def obtener_historial_turnos(paciente_id):
         ")"
     )
 
-    # Turnos futuros o del día (excluyendo cancelados)
     turnos_proximos = supabase.table("turnos") \
         .select(relaciones) \
         .eq("paciente_id", paciente_id) \
@@ -284,7 +283,6 @@ def obtener_historial_turnos(paciente_id):
         .order("fecha") \
         .execute().data
 
-    # Turnos pasados (incluyendo cancelados)
     turnos_pasados = supabase.table("turnos") \
         .select(relaciones) \
         .eq("paciente_id", paciente_id) \
@@ -292,11 +290,18 @@ def obtener_historial_turnos(paciente_id):
         .order("fecha", desc=True) \
         .execute().data
 
+    turnos_cancelados = supabase.table("turnos") \
+        .select(relaciones) \
+        .eq("paciente_id", paciente_id) \
+        .eq("estado", "cancelado") \
+        .order("fecha", desc=True) \
+        .execute().data
+
     return {
         "proximos": turnos_proximos,
-        "pasados": turnos_pasados
+        "pasados": turnos_pasados,
+        "cancelados": turnos_cancelados
     }
-
 
 
 def obtener_instituciones():
