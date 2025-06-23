@@ -109,7 +109,7 @@ class App(tk.Tk):
 
         elif user_type == "paciente":
             from ui.pacientes.dashboard import PacienteDashboard
-            self.current_frame = PacienteDashboard(self, self.current_user)
+            self.current_frame = PacienteDashboard(self, self.current_user['id'])
 
         elif user_type == "institucion":
             from ui.institucion.dashboard import InstitucionMainDashboard
