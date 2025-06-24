@@ -1,9 +1,8 @@
-# ui/medicos/dashboard.py
-
 from tkinter import *
 from ui.medicos.agenda import AgendaMedicoFrame
 from ui.medicos.horarios import HorariosFrame
 from ui.medicos.pacientes import PacientesFrame
+
 
 class MedicoDashboard(Frame):
     def __init__(self, parent, medico_id):
@@ -16,14 +15,15 @@ class MedicoDashboard(Frame):
         Button(self, text="Ver Agenda", width=25, command=self.mostrar_agenda).pack(pady=5)
         Button(self, text="Configurar Horarios", width=25, command=self.mostrar_horarios).pack(pady=5)
         Button(self, text="Ver Pacientes", width=25, command=self.mostrar_pacientes).pack(pady=5)
+        Button(self, text="Cerrar Sesión", width=25, command=self.parent.logout).pack(pady=5)
+        
 
         self.subframe_container = Frame(self)
         self.subframe_container.pack(fill=BOTH, expand=True, padx=10, pady=10)
-
         self.current_subframe = None
 
     def limpiar_subframe(self):
-        if self.current_subframe is not None:
+        if self.current_subframe:
             self.current_subframe.destroy()
             self.current_subframe = None
 
