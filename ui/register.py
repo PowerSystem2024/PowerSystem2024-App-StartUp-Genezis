@@ -4,6 +4,7 @@ import datetime
 
 from tkcalendar import DateEntry
 from controllers.auth_controller import AuthController
+from utils.sesion import usuario_actual
 
 class RegisterFrame(ttk.Frame):
     """Pantalla de registro de usuario con widgets mejorados."""
@@ -122,6 +123,10 @@ class RegisterFrame(ttk.Frame):
         user = self.auth_controller.register_user_and_paciente(user_data, user_paciente_data)
 
         if user:
+
+            #Guardamos datos del paciente
+            usuario_actual.clear()
+            usuario_actual.update(user_data)
             messagebox.showinfo("Éxito", "Usuario y perfil de paciente registrados correctamente.")
             self.on_register_success()
         else:
