@@ -70,6 +70,53 @@ def eliminarMedico(medico_id):
     return supabase.table("medicos").delete().eq("id", medico_id).execute().data
 
 
+# En controllers.py
+
+def buscar_medicos_para_asociar(termino_busqueda, institucion_id_actual):
+    print(f"\n--- INICIANDO BÚSQUEDA (LÓGICA 'SOLO MÉDICOS') ---")
+
+    try:
+        # Paso 1: Obtener IDs de usuario que YA están en la institución actual.
+        medicos_actuales = supabase.table("medicos").select("usuario_id").eq("institucion_id",
+                                                                             institucion_id_actual).execute().data
+        ids_a_excluir = {medico['usuario_id'] for medico in medicos_actuales if medico.get('usuario_id')}
+        print(f"Paso 1 - OK: IDs a excluir: {ids_a_excluir}")
+
+        print("Paso 2 - Buscando en la tabla 'medicos' y uniendo 'usuarios'...")
+        query = supabase.table("medicos").select("*, usuarios(*)").eq("usuarios.tipo", "medico")
+
+        if termino_busqueda:
+            print(f"Aplicando filtro de email: {termino_busqueda}")
+            query = query.ilike("usuarios.email", f"%{termino_busqueda}%")
+
+        candidatos_crudos = query.execute().data
+        print(f"Se encontraron {len(candidatos_crudos)} registros de médicos en total.")
+
+        # Paso 3: Procesar y filtrar en Python para evitar duplicados.
+        medicos_procesados = {}
+        for medico in candidatos_crudos:
+            usuario = medico.get('usuarios')
+            if not usuario: continue
+            # Si el médico ya está en la institución actual, lo ignoramos
+            if usuario['id'] in ids_a_excluir:
+                continue
+
+            if usuario['id'] not in medicos_procesados:
+                medicos_procesados[usuario['id']] = medico
+
+        # Convertimos el diccionario de vuelta a una lista
+        medicos_disponibles = list(medicos_procesados.values())
+
+        print(f"Paso 3 - OK: Quedan {len(medicos_disponibles)} médicos únicos y disponibles.")
+        print(f"--- BÚSQUEDA FINALIZADA ---\n")
+
+        return medicos_disponibles
+
+    except Exception as e:
+        print(f"!!!!!!!!!! ERROR DURANTE LA BÚSQUEDA: {e} !!!!!!!!!!")
+        return []
+
+
 #==========================================
 # CRUD Horarios Disponibles
 #==========================================
