@@ -160,7 +160,6 @@ class MedicosDashboard(tk.Frame):
 # CLASE 1: EL PANEL PRINCIPAL DE MÉDICOS (DASHBOARD)
 # ======================================================================
 class MedicosDashboard(tk.Frame):
-    # ... (Esta clase no necesita cambios, la dejamos como está) ...
     def __init__(self, parent, institucion):
         super().__init__(parent)
         self.parent = parent
@@ -293,7 +292,6 @@ class AgregarMedicoDialog:
         self.centrar_ventana()
         self.cambiar_modo()
 
-    # ... (los métodos centrar_ventana, crear_widgets, setup_ui_crear y setup_ui_asociar no cambian) ...
     def centrar_ventana(self):
         self.dialog.update_idletasks();
         width = self.dialog.winfo_width();
