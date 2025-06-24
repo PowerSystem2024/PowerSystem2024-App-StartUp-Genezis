@@ -1,121 +1,186 @@
-from tkinter import *
+import tkinter as tk
 from tkinter import ttk, messagebox
-from controllers.med_controller import obtener_pacientes_por_medico, obtener_historial_paciente
+from controllers import med_controller
+
+class HistorialTurnosFrame(tk.Toplevel):
+    def __init__(self, parent, paciente_id, paciente_nombre):
+        super().__init__(parent)
+        self.title(f"Historial de Turnos - {paciente_nombre}")
+        self.geometry("800x500")
+        self.resizable(True, True)
+
+        # Etiqueta del título
+        tk.Label(self, text=f"Historial de Turnos: {paciente_nombre}",
+                 font=("Arial", 14, "bold")).pack(pady=10)
+
+        # Crear el Treeview para mostrar el historial
+        columns = ("fecha", "hora_inicio", "estado", "notas")
+        self.tree = ttk.Treeview(self, columns=columns, show="headings")
+
+        # Configurar encabezados
+        self.tree.heading("fecha", text="Fecha")
+        self.tree.heading("hora_inicio", text="Hora")
+        self.tree.heading("estado", text="Estado")
+        self.tree.heading("notas", text="Notas")
+
+        # Configurar columnas
+        self.tree.column("fecha", width=120, anchor="center")
+        self.tree.column("hora_inicio", width=100, anchor="center")
+        self.tree.column("estado", width=100, anchor="center")
+        self.tree.column("notas", width=400, anchor="w")
+
+        # Añadir scrollbar
+        scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+
+        # Colocar elementos en la ventana
+        self.tree.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        scrollbar.pack(side="right", fill="y", pady=10)
+
+        # Botón de cerrar
+        tk.Button(self, text="Cerrar", command=self.destroy).pack(pady=10)
+
+        # Cargar los datos
+        self.cargar_historial(paciente_id)
+
+    def cargar_historial(self, paciente_id):
+        # Limpiar el treeview
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        try:
+            # Obtener el historial del paciente
+            turnos = med_controller.obtener_historial_paciente(paciente_id)
+
+            # Verificar si hay turnos
+            if not turnos:
+                messagebox.showinfo("Información", "Este paciente no tiene turnos registrados.")
+                return
+
+            # Insertar los turnos en el treeview
+            for turno in turnos:
+                fecha = turno.get("fecha", "")
+                hora = turno.get("hora_inicio", "")
+                estado = turno.get("estado", "")
+                notas = turno.get("notas", "")
+
+                self.tree.insert("", "end", values=(fecha, hora, estado, notas))
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al cargar el historial: {str(e)}")
 
 
-class PacientesFrame(Frame):
+class PacientesFrame(tk.Frame):
     def __init__(self, parent, medico_id):
         super().__init__(parent)
+        self.parent = parent
         self.medico_id = medico_id
-        self.botones = []  # Para mantener referencia a los botones
 
-        Label(self, text="Pacientes Atendidos", font=("Arial", 14, "bold")).pack(pady=10)
+        # Título
+        tk.Label(self, text="Pacientes", font=("Arial", 16, "bold")).pack(pady=10)
 
-        # Frame para contener el treeview y un scrollbar
-        frame_tree = Frame(self)
-        frame_tree.pack(fill=BOTH, expand=True, padx=10, pady=10)
+        # Frame para el treeview y scrollbar
+        frame_tree = tk.Frame(self)
+        frame_tree.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # Scrollbar para el treeview
-        scrollbar = ttk.Scrollbar(frame_tree)
-        scrollbar.pack(side=RIGHT, fill=Y)
+        # Crear Treeview
+        columns = ("id", "nombre", "obra_social", "numero_afiliado", "ver_historial")
+        self.tree = ttk.Treeview(frame_tree, columns=columns, show="headings", height=15)
 
-        # Modificación de las columnas: agregamos estado y mantenemos ver_nota
-        self.tree = ttk.Treeview(frame_tree, columns=("nombre", "obra_social", "numero_afiliado", "estado", "ver_nota"),
-                                 show="headings", yscrollcommand=scrollbar.set)
-        scrollbar.config(command=self.tree.yview)
-
+        # Configurar encabezados
+        self.tree.heading("id", text="ID")
         self.tree.heading("nombre", text="Nombre")
         self.tree.heading("obra_social", text="Obra Social")
-        self.tree.heading("numero_afiliado", text="Número de Afiliado")
-        self.tree.heading("estado", text="Estado")
-        self.tree.heading("ver_nota", text="Ver Nota")
+        self.tree.heading("numero_afiliado", text="Número Afiliado")
+        self.tree.heading("ver_historial", text="Historial")
 
-        # Configurar ancho de columnas
-        self.tree.column("nombre", width=150)
-        self.tree.column("obra_social", width=120)
-        self.tree.column("numero_afiliado", width=120)
-        self.tree.column("estado", width=100)
-        self.tree.column("ver_nota", width=80, anchor=CENTER)
+        # Configurar columnas
+        self.tree.column("id", width=50, anchor="center")
+        self.tree.column("nombre", width=200, anchor="w")
+        self.tree.column("obra_social", width=150, anchor="w")
+        self.tree.column("numero_afiliado", width=150, anchor="w")
+        self.tree.column("ver_historial", width=100, anchor="center")
 
-        self.tree.pack(side=LEFT, fill=BOTH, expand=True)
+        # Ocultar la columna ID
+        self.tree.column("id", width=0, stretch=tk.NO)
 
-        # Frame para contener los botones que estarán alineados con el treeview
-        self.frame_botones = Frame(self)
-        self.frame_botones.pack(fill=X, padx=10)
 
-        # Cuando se dibuja o actualiza el treeview, actualizar los botones
-        self.tree.bind("<Map>", self.actualizar_botones)
-        self.tree.bind("<Configure>", self.actualizar_botones)
-        self.tree.bind("<Expose>", self.actualizar_botones)
 
+        # Scrollbar vertical
+        scrollbar = ttk.Scrollbar(frame_tree, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+
+        # Colocar treeview y scrollbar
+        self.tree.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Vincular evento de clic
+        self.tree.bind("<ButtonRelease-1>", self.verificar_clic_historial)
+
+        # Frame para botones
+        self.frame_botones = tk.Frame(self)
+        self.frame_botones.pack(fill="x", padx=10, pady=10)
+
+        # Botón de actualizar
+        self.botones = {}
+        self.botones["actualizar"] = tk.Button(
+            self.frame_botones,
+            text="Actualizar",
+            command=self.cargar
+        )
+        self.botones["actualizar"].pack(side="left", padx=5)
+
+        # Inicialmente cargar datos
         self.cargar()
 
     def cargar(self):
-        self.tree.delete(*self.tree.get_children())
-        # Limpiar botones existentes
-        for btn in self.botones:
-            btn.destroy()
-        self.botones = []
+        # Limpiar el treeview
+        for item in self.tree.get_children():
+            self.tree.delete(item)
 
-        pacientes = obtener_pacientes_por_medico(self.medico_id)
-        for p in pacientes:
-            nombre = f"{p.get('nombre', '')} {p.get('apellido', '')}"
-            # Obtenemos el estado del último turno del paciente
-            historial = obtener_historial_paciente(p["id"])
-            estado = historial[0].get('estado', '-') if historial else '-'
+        try:
+            # Obtener pacientes
+            pacientes = med_controller.obtener_pacientes_por_medico(self.medico_id)
 
-            self.tree.insert("", END, iid=p["id"], values=(
-                nombre.strip(),
-                p.get("obra_social", "-"),
-                p.get("numero_afiliado", "-"),
-                estado,
-                "Ver"  # Mantenemos el texto como referencia
-            ))
+            # Verificar si hay pacientes
+            if not pacientes:
+                messagebox.showinfo("Información", "No se encontraron pacientes.")
+                return
 
-        # Después de insertar todos los elementos, actualizamos los botones
-        self.actualizar_botones()
+            # Insertar pacientes en el treeview
+            for paciente in pacientes:
+                # Combinar apellido y nombre
+                nombre_completo = f"{paciente['apellido']}, {paciente['nombre']}"
 
-    def actualizar_botones(self, event=None):
-        # Eliminar botones existentes
-        for btn in self.botones:
-            btn.destroy()
-        self.botones = []
+                values = (
+                    paciente["id"],
+                    nombre_completo,
+                    paciente["obra_social"],
+                    paciente["numero_afiliado"],
+                    "Ver más"
+                )
+                item_id = self.tree.insert("", "end", values=values)
 
-        # Crear nuevos botones para cada fila visible
-        for item_id in self.tree.get_children():
-            # Verificar si el ítem es visible
-            if self.tree.exists(item_id):
-                bbox = self.tree.bbox(item_id, column=4)  # Columna "Ver Nota"
-                if bbox:  # Solo si es visible
-                    x, y, width, height = bbox
-                    btn = Button(self.tree, text="Ver", bg="#0078D7", fg="white",
-                                 command=lambda pid=item_id: self.abrir_ventana_nota(pid))
-                    btn.place(x=x + width // 2 - 15, y=y + 2, width=30, height=height - 4)
-                    self.botones.append(btn)
 
-    def abrir_ventana_nota(self, paciente_id):
-        # Obtener el historial del paciente para mostrar sus notas
-        historial = obtener_historial_paciente(paciente_id)
-        if historial:
-            # Crear una nueva ventana para mostrar las notas
-            ventana_nota = Toplevel(self)
-            ventana_nota.title("Notas del Paciente")
-            ventana_nota.geometry("500x400")
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al cargar pacientes: {str(e)}")
 
-            # Crear un widget de texto para mostrar todas las notas
-            txt_nota = Text(ventana_nota, wrap=WORD)
-            txt_nota.pack(fill=BOTH, expand=True, padx=10, pady=10)
+    def verificar_clic_historial(self, event):
+        region = self.tree.identify_region(event.x, event.y)
+        if region == "cell":
+            column = self.tree.identify_column(event.x)
+            if column == "#5":  # Quinta columna (Ver historial)
+                item = self.tree.focus()
+                if item:
+                    self.mostrar_historial(item)
 
-            # Insertar cada nota con formato
-            for t in historial:
-                txt_nota.insert(END, f"Fecha: {t['fecha']}\n")
-                txt_nota.insert(END, f"Estado: {t['estado']}\n")
-                txt_nota.insert(END, f"Nota: {t.get('notas', '')}\n")
-                txt_nota.insert(END, "-" * 40 + "\n\n")
+    def mostrar_historial(self, item):
+        # Obtener datos del paciente seleccionado
+        valores = self.tree.item(item, "values")
+        paciente_id = valores[0]
+        nombre_completo = valores[1]
 
-            txt_nota.config(state=DISABLED)  # Hacer el texto de solo lectura
-
-            # Botón para cerrar la ventana
-            Button(ventana_nota, text="Cerrar", command=ventana_nota.destroy).pack(pady=10)
-        else:
-            messagebox.showinfo("Sin datos", "Este paciente no tiene notas registradas.")
+        # Abrir ventana de historial
+        historial_window = HistorialTurnosFrame(self, paciente_id, nombre_completo)
+        historial_window.transient(self)
+        historial_window.grab_set()
