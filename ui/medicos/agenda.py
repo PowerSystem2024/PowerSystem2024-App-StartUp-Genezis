@@ -1,9 +1,8 @@
 # views/medico/agenda.py
 
 from tkinter import *
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, simpledialog
 from tkcalendar import Calendar
-#from dateutil import datetime corregir
 from controllers.med_controller import obtener_turnos_del_dia, completar_turno, cancelar_turno
 
 class AgendaMedicoFrame(Frame):
