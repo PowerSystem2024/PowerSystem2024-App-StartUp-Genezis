@@ -1,11 +1,11 @@
-# controllers/admin_controller.py
-
 import os
 import secrets
 from dotenv import load_dotenv
 from supabase import create_client
 from utils.date_utils import fecha_hora_actual_utc
 from utils.security_utils import hash_password
+from datetime import datetime # Importar datetime para manejar fechas
+from postgrest.exceptions import APIError # Importar la excepción específica
 
 # Cargar variables de entorno
 load_dotenv()
@@ -56,8 +56,61 @@ def actualizar_usuario(usuario_id, nuevos_datos):
 
 
 def borrar_usuario(usuario_id):
-    """Borra un usuario."""
-    return supabase.table("usuarios").delete().eq("id", usuario_id).execute().data
+    """
+    Borra un usuario y, antes de hacerlo, elimina sus registros asociados en
+    las tablas 'pacientes', 'medicos' o 'instituciones' para evitar violaciones
+    de claves foráneas.
+    """
+    try:
+        # Primero, obtener el tipo de usuario para manejar eliminaciones en cascada
+        user_data_response = supabase.table("usuarios").select("tipo").eq("id", usuario_id).single().execute()
+        user_type = user_data_response.data.get("tipo") if user_data_response.data else None
+
+        if user_type == "paciente":
+            # Eliminar primero el registro del paciente
+            print(f"Intentando eliminar paciente con usuario_id: {usuario_id}")
+            try:
+                supabase.table("pacientes").delete().eq("usuario_id", usuario_id).execute()
+                print(f"Paciente con usuario_id {usuario_id} eliminado con éxito.")
+            except APIError as e:
+                print(f"Error al eliminar paciente con usuario_id {usuario_id}: {e}")
+                # No propagar el error aquí, para intentar eliminar el usuario principal
+                # a menos que la FK de pacientes sea la única razón del fallo
+
+        elif user_type == "medico":
+            # Eliminar primero el registro del médico
+            print(f"Intentando eliminar médico con usuario_id: {usuario_id}")
+            try:
+                supabase.table("medicos").delete().eq("usuario_id", usuario_id).execute()
+                print(f"Médico con usuario_id {usuario_id} eliminado con éxito.")
+            except APIError as e:
+                print(f"Error al eliminar médico con usuario_id {usuario_id}: {e}")
+
+        elif user_type == "institucion":
+            # Eliminar primero el registro de la institución
+            print(f"Intentando eliminar institución con usuario_id: {usuario_id}")
+            try:
+                supabase.table("instituciones").delete().eq("usuario_id", usuario_id).execute()
+                print(f"Institución con usuario_id {usuario_id} eliminada con éxito.")
+            except APIError as e:
+                print(f"Error al eliminar institución con usuario_id {usuario_id}: {e}")
+
+        # Finalmente, eliminar el registro del usuario
+        try:
+            final_delete_response = supabase.table("usuarios").delete().eq("id", usuario_id).execute()
+            print(f"Usuario con ID {usuario_id} y sus registros asociados eliminados con éxito.")
+            return final_delete_response.data
+        except APIError as e:
+            print(f"Error final al eliminar usuario con ID {usuario_id}: {e}")
+            raise e # Propaga el error si falla la eliminación final
+
+    except APIError as e:
+        print(f"Error de Supabase en borrar_usuario: {e}")
+        raise e
+    except Exception as e:
+        print(f"Error general en borrar_usuario: {e}")
+        raise e
+
 
 def admin_actualizar_password_usuario(usuario_id, nueva_password):
     """
@@ -126,6 +179,130 @@ def registrar_nueva_institucion(nombre, password, direccion, email, telefono="",
         print(f"Error en el proceso de registro de institución: {e}")
         raise e
 
+# ====================================
+# SECCIÓN: GESTIÓN DE PACIENTES
+# ====================================
+def crear_paciente(usuario_id, fecha_nacimiento, genero, telefono, obra_social, num_afiliado):
+    """Crea un nuevo paciente."""
+    data = {
+        "usuario_id": usuario_id,
+        "fecha_nacimiento": fecha_nacimiento,
+        "genero": genero,
+        "telefono": telefono,
+        "obra_social": obra_social,
+        "num_afiliado": num_afiliado,
+    }
+    return supabase.table("pacientes").insert(data).execute().data
+
+def actualizar_paciente(paciente_id, nuevos_datos):
+    """Actualiza los datos de un paciente."""
+    nuevos_datos["actualizado_en"] = fecha_hora_actual_utc()
+    return supabase.table("pacientes").update(nuevos_datos).eq("id", paciente_id).execute().data
+
+def registrar_nuevo_paciente(nombre, apellido, email, password, fecha_nacimiento="", genero="", telefono="", obra_social="", num_afiliado=""):
+    """Orquesta la creación completa de un paciente."""
+    try:
+        usuario_data = crear_usuario(
+            email=email, password=password, tipo='paciente',
+            nombre=nombre, apellido=apellido
+        )
+        if not usuario_data:
+            raise Exception("No se pudo crear el registro de usuario para el paciente.")
+
+        nuevo_usuario_id = usuario_data[0]['id']
+
+        paciente_creado = crear_paciente(
+            usuario_id=nuevo_usuario_id,
+            fecha_nacimiento=fecha_nacimiento,
+            genero=genero,
+            telefono=telefono,
+            obra_social=obra_social,
+            num_afiliado=num_afiliado,
+        )
+        if not paciente_creado:
+            raise Exception("El usuario fue creado, pero el paciente no pudo registrarse.")
+
+        return paciente_creado
+    except Exception as e:
+        print(f"Error en el proceso de registro de paciente: {e}")
+        raise e
+
+# ====================================
+# SECCIÓN: GESTIÓN DE MEDICOS
+# ====================================
+def crear_medico(usuario_id, especialidad, matricula, institucion_id=None, duracion_turno=None):
+    """Crea un nuevo médico."""
+    data = {
+        "usuario_id": usuario_id,
+        "especialidad": especialidad,
+        "matricula": matricula,
+        "institucion_id": institucion_id,
+        "duracion_turno": duracion_turno,
+        "creado_en": fecha_hora_actual_utc() # Añadido el campo creado_en
+    }
+    return supabase.table("medicos").insert(data).execute().data
+
+def obtener_medico_id_por_usuario_id(usuario_id: str) -> str | None:
+    """
+    Busca en la tabla 'medicos' y devuelve el ID del médico (PK)
+    basado en el ID del usuario (FK).
+    Devuelve el ID del médico si se encuentra, o None si no.
+    """
+    if not usuario_id:
+        return None
+
+    try:
+        response = supabase.table("medicos") \
+            .select("id") \
+            .eq("usuario_id", usuario_id) \
+            .single() \
+            .execute()
+
+        if response.data:
+            return response.data.get('id')
+        else:
+            return None
+    except Exception as e:
+        print(f"Error al buscar médico por usuario_id ({usuario_id}): {e}")
+        return None
+
+def obtener_medicos():
+    """Obtiene todos los médicos."""
+    # Aquí puedes expandir para incluir información del usuario o institución
+    return supabase.table("medicos").select("*, usuario:usuarios(nombre, apellido, email), institucion:instituciones(nombre)").execute().data
+
+def actualizar_medico(medico_id, nuevos_datos):
+    """Actualiza los datos de un médico."""
+    nuevos_datos["actualizado_en"] = fecha_hora_actual_utc()
+    return supabase.table("medicos").update(nuevos_datos).eq("id", medico_id).execute().data
+
+def registrar_nuevo_medico(nombre, apellido, email, password, especialidad, matricula, institucion_id=None, duracion_turno=None):
+    """Orquesta la creación completa de un médico."""
+    try:
+        usuario_data = crear_usuario(
+            email=email, password=password, tipo='medico',
+            nombre=nombre, apellido=apellido
+        )
+        if not usuario_data:
+            raise Exception("No se pudo crear el registro de usuario para el médico.")
+
+        nuevo_usuario_id = usuario_data[0]['id']
+
+        medico_creado = crear_medico(
+            usuario_id=nuevo_usuario_id,
+            especialidad=especialidad,
+            matricula=matricula,
+            institucion_id=institucion_id,
+            duracion_turno=duracion_turno
+        )
+        if not medico_creado:
+            raise Exception("El usuario fue creado, pero el médico no pudo registrarse.")
+
+        return medico_creado
+    except Exception as e:
+        print(f"Error en el proceso de registro de médico: {e}")
+        raise e
+
 
 # ====================================
 # SECCIÓN: OBTENCIÓN DE INFORMACIÓN DETALLADA
@@ -134,8 +311,7 @@ def obtener_info_completa_medico(usuario_id):
     """Obtiene información completa y formateada de un médico."""
     query = "*, institucion:instituciones(nombre)"
     resultado = supabase.table("medicos").select(query).eq("usuario_id", usuario_id).limit(1).execute().data
-    # ... (lógica de formato)
-    return resultado  # Simplificado para brevedad, tu lógica original está bien
+    return resultado
 
 
 def obtener_info_paciente(usuario_id):
@@ -186,12 +362,28 @@ user_methods = {
     'admin_actualizar_password_usuario': admin_actualizar_password_usuario
 }
 
-# Métodos de gestión de instituciones (ESTA ERA LA PARTE QUE FALTABA)
+# Métodos de gestión de instituciones
 institution_methods = {
     'crear_institucion': crear_institucion,
     'obtener_instituciones': obtener_instituciones,
     'actualizar_institucion': actualizar_institucion,
     'registrar_nueva_institucion': registrar_nueva_institucion,
+}
+
+# Métodos de gestión de pacientes
+patient_methods = {
+    'crear_paciente': crear_paciente,
+    'actualizar_paciente': actualizar_paciente,
+    'registrar_nuevo_paciente': registrar_nuevo_paciente,
+}
+
+# Métodos de gestión de medicos (Asegúrate de que existan en tu código)
+medico_methods = {
+    'crear_medico': crear_medico,
+    'obtener_medico_id_por_usuario_id': obtener_medico_id_por_usuario_id, # Añadida esta función
+    'obtener_medicos': obtener_medicos,
+    'actualizar_medico': actualizar_medico,
+    'registrar_nuevo_medico': registrar_nuevo_medico,
 }
 
 # Métodos para obtener información detallada
@@ -210,6 +402,8 @@ stats_methods = {
 all_methods = {
     **user_methods,
     **institution_methods,
+    **patient_methods,
+    **medico_methods,
     **info_methods,
     **stats_methods
 }
