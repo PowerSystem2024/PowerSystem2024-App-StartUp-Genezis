@@ -133,3 +133,4 @@ class LoginInterface(Frame):
         print("button_1 clicked register")
 
         pass
+

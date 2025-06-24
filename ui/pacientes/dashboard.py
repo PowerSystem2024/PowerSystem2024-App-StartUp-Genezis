@@ -23,6 +23,7 @@ class PacienteDashboard(Frame):
         Button(self.main_container, text="Mis Datos", width=25, command=self.mostrar_perfil).pack(pady=5)
         Button(self.main_container, text="Mis Turnos", width=25, command=self.mostrar_turnos).pack(pady=5)
 
+
         self.current_subframe = None
 
     def limpiar_subframe(self):
@@ -48,3 +49,6 @@ class PacienteDashboard(Frame):
     def mostrar_dashboard(self):
         self.limpiar_subframe()
         self.main_container.pack(side=TOP, anchor=N, pady=50)  # <-- fuerza que se muestre arriba
+
+
+
