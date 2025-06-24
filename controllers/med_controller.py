@@ -10,10 +10,10 @@ supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 def obtener_horarios_disponibles(medico_id):
     return supabase.table("horarios_disponibles").select("*").eq("medico_id", medico_id).execute().data
 
-def agregar_horario_disponible(medico_id, dia, inicio, fin):
+def agregar_horario_disponible(medico_id, fecha, inicio, fin):
     return supabase.table("horarios_disponibles").insert({
         "medico_id": medico_id,
-        "dia_semana": dia,
+        "fecha_horario": fecha,
         "hora_inicio": inicio,
         "hora_fin": fin
     }).execute().data
@@ -50,15 +50,25 @@ def obtener_pacientes_por_medico(medico_id):
 
     pacientes = []
     for pid in ids_pacientes:
-        p = supabase.table("pacientes").select("id, usuario_id, obra_social").eq("id", pid).execute().data
+        # Modificado para incluir num_afiliado en la consulta
+        p = supabase.table("pacientes").select("id, usuario_id, obra_social, num_afiliado").eq("id", pid).execute().data
         if p:
             u = supabase.table("usuarios").select("nombre, apellido").eq("id", p[0]["usuario_id"]).execute().data
+            # Obtener el último estado del paciente
+            ultimo_turno = supabase.table("turnos").select("estado").eq("paciente_id", pid).order("fecha",
+                                                                                                  desc=True).limit(
+                1).execute().data
+            estado = ultimo_turno[0]["estado"] if ultimo_turno else "-"
+
             if u:
                 pacientes.append({
                     "id": p[0]["id"],
                     "nombre": u[0]["nombre"],
                     "apellido": u[0]["apellido"],
-                    "obra_social": p[0]["obra_social"]
+                    "obra_social": p[0]["obra_social"],
+                    "numero_afiliado": p[0].get("num_afiliado", "-"),
+                    "estado": estado
                 })
     return pacientes
+
 
