@@ -21,6 +21,13 @@ def agregar_horario_disponible(medico_id, fecha, inicio, fin):
 def eliminar_horario_disponible(horario_id):
     return supabase.table("horarios_disponibles").delete().eq("id", horario_id).execute().data
 
+#Turnos
+
+def obtener_todos_los_turnos(medico_id):
+    """Obtiene todos los turnos de un médico independientemente de la fecha"""
+    return supabase.table("turnos").select("*").eq("medico_id", medico_id).execute().data
+
+
 # Agenda
 
 def obtener_turnos_del_dia(medico_id, fecha):
