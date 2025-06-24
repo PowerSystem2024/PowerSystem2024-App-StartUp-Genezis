@@ -172,8 +172,9 @@ class BuscarTurnosFrame(Frame):
             except ValueError:
                 fecha_formateada = fecha_raw
 
-            # 🔹 Agregar prefijo "Dr." al nombre
-            nombre_medico = f"Dr. {turno['nombre_medico']}".strip()
+            # 🔹 Agregar prefijo "Dr." si no está incluido
+            nombre_original = turno['nombre_medico']
+            nombre_medico = nombre_original if nombre_original.lower().startswith("dr.") else f"Dr. {nombre_original}"
 
             self.tree.insert("", "end", iid=turno["id"], values=(
                 nombre_medico,

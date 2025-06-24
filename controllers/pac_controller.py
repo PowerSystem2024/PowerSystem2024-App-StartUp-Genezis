@@ -78,10 +78,8 @@ def delete_paciente(paciente_id):
 
 def buscar_turnos_disponibles(especialidad, fecha, institucion_id):
     try:
-        dia_semana = datetime.strptime(fecha, "%Y-%m-%d").weekday()
-
         response = supabase.table("horarios_disponibles").select("*") \
-            .eq("dia_semana", dia_semana) \
+            .eq("fecha_horario", fecha) \
             .eq("activo", True) \
             .execute()
 
@@ -110,7 +108,7 @@ def buscar_turnos_disponibles(especialidad, fecha, institucion_id):
                 continue
 
             usuario = medico.get("usuario", {})
-            nombre_medico = f"{usuario.get('nombre', '')} {usuario.get('apellido', '')}"
+            nombre_medico = f"Dr. {usuario.get('nombre', '')} {usuario.get('apellido', '')}".strip()
 
             resultados_filtrados.append({
                 "id": turno["id"],
@@ -126,6 +124,7 @@ def buscar_turnos_disponibles(especialidad, fecha, institucion_id):
     except Exception as e:
         print(f"[ERROR] buscar_turnos_disponibles: {e}")
         return []
+
 
 #Función para RESERVAR un turno nuevo e insertarlo en la tabla turnos.
 def reservar_turno(horario_id, usuario_id, fecha_turno):
@@ -243,13 +242,9 @@ def cancelar_turno(turno_id, paciente_id, motivo_cancelacion="Cancelado por el p
             .eq("id", turno_id) \
             .execute()
 
-        # Restaurar horario en horarios_disponibles
-        fecha_str = turno["fecha"]  # formato: YYYY-MM-DD
-        fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d")
-        dia_semana = fecha_obj.weekday()  # lunes=0, domingo=6
-
+        # Restaurar horario en horarios_disponibles usando fecha exacta
         nuevo_horario = {
-            "dia_semana": datetime.strptime(turno["fecha"], "%Y-%m-%d").weekday(),
+            "fecha_horario": turno["fecha"],  # 👈 clave nueva
             "hora_inicio": turno["hora_inicio"],
             "hora_fin": turno["hora_fin"],
             "medico_id": turno["medico_id"],
@@ -263,6 +258,7 @@ def cancelar_turno(turno_id, paciente_id, motivo_cancelacion="Cancelado por el p
     except Exception as e:
         print("[ERROR] al cancelar turno:", e)
         return {"error": "Ocurrió un error al cancelar el turno."}
+
 
 
 # Función para ver HISTORIAL de Turnos
