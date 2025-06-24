@@ -2,17 +2,15 @@
 
 from tkinter import *
 from tkinter import ttk, messagebox
-from controllers.med_controller import (
-    obtener_horarios_disponibles,
-    agregar_horario_disponible,
-    eliminar_horario_disponible
-)
+from controllers.med_controller import obtener_horarios_disponibles, agregar_horario_disponible, eliminar_horario_disponible
 
 DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 
 class HorariosFrame(Frame):
     def __init__(self, parent, medico_id):
         super().__init__(parent)
+
+        print(f"DEBUG: HorariosFrame recibido con medico_id: {medico_id}")
         self.medico_id = medico_id
 
         Label(self, text="Horarios Disponibles", font=("Arial", 16, "bold")).pack(pady=10)

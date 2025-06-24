@@ -1,3 +1,5 @@
 supabase==1.0.3
 python-dotenv==1.0.0
 pillow==9.5.0  # Para manejo de imágenes en Tkinter
+tkcalendar==1.6.1
+bcrypt==4.3.0

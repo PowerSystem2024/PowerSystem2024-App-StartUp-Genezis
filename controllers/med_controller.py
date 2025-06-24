@@ -29,6 +29,35 @@ def crear_medico(usuario_id, institucion_id, especialidad, matricula, duracion_t
     }
     return supabase.table("medicos").insert(data).execute().data
 
+def obtener_medico_id_por_usuario_id(usuario_id: str) -> str | None:
+    """
+    Busca en la tabla 'medicos' y devuelve el ID del médico (PK)
+    basado en el ID del usuario (FK).
+    Devuelve el ID del médico si se encuentra, o None si no.
+    """
+    if not usuario_id:
+        return None
+
+    try:
+        # Usamos .select("id") para traer solo la columna que necesitamos. Es más eficiente.
+        # Usamos .single() para asegurarnos de que solo esperamos un resultado.
+        response = supabase.table("medicos") \
+            .select("id") \
+            .eq("usuario_id", usuario_id) \
+            .single() \
+            .execute()
+
+        # Si la consulta encuentra datos, devolvemos el 'id' del médico.
+        if response.data:
+            return response.data.get('id')
+        else:
+            # No se encontró un médico con ese usuario_id
+            return None
+    except Exception as e:
+        # Imprimimos el error en la consola del servidor para depuración
+        print(f"Error al buscar médico por usuario_id ({usuario_id}): {e}")
+        return None
+
 
 def obtener_medicos():
     return supabase.table("medicos").select("*").execute().data
