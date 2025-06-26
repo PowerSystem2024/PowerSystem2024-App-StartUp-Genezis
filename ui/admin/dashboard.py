@@ -358,6 +358,27 @@ class AdminDashboard(tk.Frame):
         self._crear_formulario_medico(self.popup_medico)
 
     def _crear_formulario_medico(self, parent_popup):
+        # Lista de especialidades médicas hardcodeadas
+        especialidades = [
+            "Cardiología",
+            "Dermatología",
+            "Endocrinología",
+            "Gastroenterología",
+            "Ginecología",
+            "Medicina General",
+            "Medicina Interna",
+            "Neurología",
+            "Oftalmología",
+            "Oncología",
+            "Ortopedia",
+            "Otorrinolaringología",
+            "Pediatría",
+            "Psiquiatría",
+            "Radiología",
+            "Traumatología",
+            "Urología"
+        ]
+
         frame = tk.Frame(parent_popup, padx=20, pady=20)
         frame.pack(fill=tk.BOTH, expand=True)
         frame.columnconfigure(1, weight=1)
@@ -378,7 +399,14 @@ class AdminDashboard(tk.Frame):
         self.confirm_password_med_entry = ttk.Entry(frame, font=("Arial", 10), show="*")
         self.confirm_password_med_entry.grid(row=5, column=1, sticky="ew", padx=5, pady=5)
 
-        self.especialidad_med_entry = self._create_label_entry(frame, "Especialidad:", 6)
+        # Campo de Especialidad (Combobox)
+        tk.Label(frame, text="Especialidad:", font=("Arial", 10)).grid(row=6, column=0, sticky="w", padx=5, pady=5)
+        self.especialidad_med_var = tk.StringVar()
+        self.especialidad_med_combo = ttk.Combobox(frame, textvariable=self.especialidad_med_var,
+                                                  values=especialidades, state="readonly")
+        self.especialidad_med_combo.grid(row=6, column=1, sticky="ew", padx=5, pady=5)
+        self.especialidad_med_combo.set("Medicina General") # Valor por defecto
+
         self.matricula_med_entry = self._create_label_entry(frame, "Matrícula:", 7)
 
         # Cargar instituciones para el combobox
@@ -409,7 +437,7 @@ class AdminDashboard(tk.Frame):
         email = self.email_med_entry.get().strip()
         password = self.password_med_entry.get().strip()
         confirm_password = self.confirm_password_med_entry.get().strip()
-        especialidad = self.especialidad_med_entry.get().strip()
+        especialidad = self.especialidad_med_var.get().strip() # Obtener valor del Combobox de especialidad
         matricula = self.matricula_med_entry.get().strip()
         duracion_turno = self.duracion_turno_med_entry.get().strip()
 

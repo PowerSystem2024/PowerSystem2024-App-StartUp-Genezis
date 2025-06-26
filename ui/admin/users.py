@@ -13,8 +13,6 @@ class UsersFrame(tk.Frame):
         self.load_users()
 
     def setup_ui(self):
-
-
         # Marco para barra busqueda
         search_frame = tk.Frame(self)
         search_frame.pack(fill=tk.X, padx=10, pady=5)
@@ -58,9 +56,8 @@ class UsersFrame(tk.Frame):
         btn_frame = tk.Frame(self)
         btn_frame.pack(pady=10)
 
-
         for text, cmd in [("Editar Usuario", self.edit_user),
-                          ("Eliminar Usuario", self.delete_user)]:
+                           ("Eliminar Usuario", self.delete_user)]:
             tk.Button(btn_frame, text=text, command=cmd).pack(side=tk.LEFT, padx=5)
 
         self.search_entry.bind("<Return>", lambda e: self.search_users())
@@ -165,7 +162,6 @@ class UsersFrame(tk.Frame):
                 messagebox.showerror("Error", f"No se pudo eliminar el usuario: {e}", parent=self)
             self.load_users()
 
-
     def open_institution_edit_form(self, user_data):
         info_institucion = self.controller.obtener_info_institucion(user_data['id'])
         if not info_institucion or not isinstance(info_institucion, list) or not info_institucion[0]:
@@ -263,7 +259,7 @@ class UsersFrame(tk.Frame):
             # 3. Mostrar mensaje final y cerrar
             if password_updated_successfully:
                 messagebox.showinfo("Éxito", "Datos de la institución y contraseña actualizados correctamente.",
-                                    parent=form)
+                                     parent=form)
             else:
                 messagebox.showinfo("Éxito", "Datos de la institución actualizados.", parent=form)
 
@@ -396,7 +392,7 @@ class UsersFrame(tk.Frame):
 
             if password_updated_successfully:
                 messagebox.showinfo("Éxito", "Datos del paciente y contraseña actualizados correctamente.",
-                                    parent=form)
+                                     parent=form)
             else:
                 messagebox.showinfo("Éxito", "Datos del paciente actualizados.", parent=form)
 
@@ -406,6 +402,27 @@ class UsersFrame(tk.Frame):
         save_button.config(command=submit)
 
     def editar_medico(self, user_data):
+        # Lista de especialidades médicas hardcodeadas
+        especialidades = [
+            "Cardiología",
+            "Dermatología",
+            "Endocrinología",
+            "Gastroenterología",
+            "Ginecología",
+            "Medicina General",
+            "Medicina Interna",
+            "Neurología",
+            "Oftalmología",
+            "Oncología",
+            "Ortopedia",
+            "Otorrinolaringología",
+            "Pediatría",
+            "Psiquiatría",
+            "Radiología",
+            "Traumatología",
+            "Urología"
+        ]
+
         info_medico = self.controller.obtener_info_completa_medico(user_data['id'])
         if not info_medico or not isinstance(info_medico, list) or not info_medico[0]:
             messagebox.showerror("Error",
@@ -429,23 +446,32 @@ class UsersFrame(tk.Frame):
         datos_frame.columnconfigure(1, weight=1)
 
         fields = {}
-        field_configs = [
-            ("nombre", "Nombre:", user_data.get("nombre"), "entry"),
-            ("apellido", "Apellido:", user_data.get("apellido"), "entry"),
-            ("email", "Email:", user_data.get("email"), "entry"),
-            ("especialidad", "Especialidad:", detalle_medico.get("especialidad"), "entry"),
-            ("matricula", "Matrícula:", detalle_medico.get("matricula"), "entry"),
-            ("duracion_turno", "Duración Turno (min):", detalle_medico.get("duracion_turno"), "entry"),
+        # field_configs para los campos de entrada de texto
+        field_configs_entries = [
+            ("nombre", "Nombre:", user_data.get("nombre")),
+            ("apellido", "Apellido:", user_data.get("apellido")),
+            ("email", "Email:", user_data.get("email")),
+            ("matricula", "Matrícula:", detalle_medico.get("matricula")),
+            ("duracion_turno", "Duración Turno (min):", detalle_medico.get("duracion_turno")),
         ]
 
-        for i, (field, label, initial_value, widget_type, *args) in enumerate(field_configs):
+        # Agregar los campos de entrada de texto
+        for i, (field, label, initial_value) in enumerate(field_configs_entries):
             ttk.Label(datos_frame, text=label).grid(row=i, column=0, sticky="w", padx=5, pady=5)
-            if widget_type == "entry":
-                entry = ttk.Entry(datos_frame)
-                entry.grid(row=i, column=1, sticky="ew", padx=5, pady=5)
-                if initial_value is not None:
-                    entry.insert(0, initial_value)
+            entry = ttk.Entry(datos_frame)
+            entry.grid(row=i, column=1, sticky="ew", padx=5, pady=5)
+            if initial_value is not None:
+                entry.insert(0, initial_value)
             fields[field] = entry
+
+        # Campo de Especialidad (Combobox)
+        row_especialidad = len(field_configs_entries) # Determinar la fila para la especialidad
+        ttk.Label(datos_frame, text="Especialidad:").grid(row=row_especialidad, column=0, sticky="w", padx=5, pady=5)
+        especialidad_var = tk.StringVar(value=detalle_medico.get("especialidad", ""))
+        especialidad_combo = ttk.Combobox(datos_frame, textvariable=especialidad_var, values=especialidades, state="readonly")
+        especialidad_combo.grid(row=row_especialidad, column=1, sticky="ew", padx=5, pady=5)
+        fields["especialidad_var"] = especialidad_var
+
 
         # Campo de institución (combobox)
         instituciones = self.controller.obtener_instituciones()
@@ -461,12 +487,12 @@ class UsersFrame(tk.Frame):
                 if inst.get("id") == current_institucion_id:
                     current_institucion_name = inst.get("nombre")
 
-        tk.Label(datos_frame, text="Institución (Opcional):", font=("Arial", 10)).grid(row=len(field_configs), column=0,
+        tk.Label(datos_frame, text="Institución (Opcional):", font=("Arial", 10)).grid(row=row_especialidad + 1, column=0,
                                                                                        sticky="w", padx=5, pady=5)
         institucion_med_var = tk.StringVar(value=current_institucion_name)
         institucion_med_combo = ttk.Combobox(datos_frame, textvariable=institucion_med_var, values=institucion_options,
-                                             state="readonly")
-        institucion_med_combo.grid(row=len(field_configs), column=1, sticky="ew", padx=5, pady=5)
+                                              state="readonly")
+        institucion_med_combo.grid(row=row_especialidad + 1, column=1, sticky="ew", padx=5, pady=5)
         fields["institucion_id_var"] = institucion_med_var  # Almacenar para obtener el valor
         fields["institucion_map"] = institucion_map  # Necesario para la conversión de nombre a ID
 
@@ -508,7 +534,7 @@ class UsersFrame(tk.Frame):
                 return
 
             nuevos_datos_medico = {
-                "especialidad": fields["especialidad"].get().strip(),
+                "especialidad": fields["especialidad_var"].get().strip(), # Obtener valor del Combobox
                 "matricula": fields["matricula"].get().strip(),
                 "institucion_id": institucion_id_para_db,
                 "duracion_turno": duracion_turno_val,
@@ -543,7 +569,7 @@ class UsersFrame(tk.Frame):
 
             if password_updated_successfully:
                 messagebox.showinfo("Éxito", "Datos del médico y contraseña actualizados correctamente.",
-                                    parent=form)
+                                     parent=form)
             else:
                 messagebox.showinfo("Éxito", "Datos del médico actualizados.", parent=form)
 
