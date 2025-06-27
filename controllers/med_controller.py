@@ -101,4 +101,44 @@ def obtener_pacientes_por_medico(medico_id):
                 })
     return pacientes
 
+# =========================================================
+# SECCIÓN: GESTIÓN DE PERFIL DEL MÉDICO
+# =========================================================
+from utils.date_utils import fecha_hora_actual_utc
+from utils.security_utils import hash_password
+
+def obtener_info_completa_medico(usuario_id):
+    """Obtiene información completa y formateada de un médico."""
+    query = "*, institucion:instituciones(nombre)"
+    resultado = supabase.table("medicos").select(query).eq("usuario_id", usuario_id).limit(1).execute().data
+    return resultado
+
+def obtener_instituciones():
+    """Obtiene todas las instituciones."""
+    return supabase.table("instituciones").select("*").execute().data
+
+def actualizar_usuario(usuario_id, nuevos_datos):
+    """Actualiza los datos de un usuario específico."""
+    nuevos_datos["actualizado_en"] = fecha_hora_actual_utc()
+    return supabase.table("usuarios").update(nuevos_datos).eq("id", usuario_id).execute().data
+
+def actualizar_medico(medico_id, nuevos_datos):
+    """Actualiza los datos de un médico."""
+    nuevos_datos["actualizado_en"] = fecha_hora_actual_utc()
+    return supabase.table("medicos").update(nuevos_datos).eq("id", medico_id).execute().data
+
+def admin_actualizar_password_usuario(usuario_id, nueva_password):
+    """
+    Permite a un admin (o al propio usuario en este contexto) actualizar su contraseña.
+    La contraseña siempre se hashea antes de guardarse.
+    """
+    if not nueva_password:
+        raise ValueError("La nueva contraseña no puede estar vacía.")
+
+    hashed_password = hash_password(nueva_password)
+    datos_actualizados = {
+        "password": hashed_password,
+        "actualizado_en": fecha_hora_actual_utc()
+    }
+    return supabase.table("usuarios").update(datos_actualizados).eq("id", usuario_id).execute().data
 

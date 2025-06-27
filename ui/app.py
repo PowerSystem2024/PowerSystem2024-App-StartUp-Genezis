@@ -3,12 +3,13 @@ from tkinter import ttk, messagebox
 from ui.loginInterface import LoginInterface
 from ui.register import RegisterFrame
 
+
 class App(tk.Tk):
     """Aplicación principal"""
-    
+
     def __init__(self):
         super().__init__()
-        
+
         # Configuración de la ventana principal
         self.title("Sistema de Turnos Médicos")
 
@@ -31,70 +32,77 @@ class App(tk.Tk):
         # Variables de estado
         self.current_user = None
         self.current_frame = None
-        
+
         # Iniciar con pantalla de login
         self.show_login()
-#---------------------------------------------------------------------------------------------------------
 
+    # ---------------------------------------------------------------------------------------------------------
 
     def show_register(self):
         """Mostrar pantalla de registro"""
         if self.current_frame:
             self.current_frame.destroy()
-        
+
         self.current_frame = RegisterFrame(self, self.on_register_success)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
-    
+
     def on_register_success(self):
         """Callback cuando el registro es exitoso"""
         messagebox.showinfo("Registro exitoso", "Usuario registrado correctamente. Por favor, inicie sesión.")
         self.show_login()
 
-
     def show_login(self):
         """Mostrar pantalla de login"""
         if self.current_frame:
             self.current_frame.destroy()
-        
+
         self.current_frame = LoginInterface(self, self.on_login_success)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
-    
+
+    # ------------------ INICIO DE CAMBIOS Y RESTAURACIÓN DE LÓGICA ------------------
     def on_login_success(self, user):
         """Callback cuando el login es exitoso"""
-        self.current_user = user
-        
-        # Mostrar el panel correspondiente según el tipo de usuario
-        self.show_dashboard(user["tipo"])
+        self.current_user = user  # Almacenamos el objeto 'user' completo
 
-    def show_dashboard(self, user_type):
+        # Mostrar el panel correspondiente según el tipo de usuario
+        # ¡IMPORTANTE! Pasamos el objeto 'user' completo a show_dashboard
+        self.show_dashboard(user)
+
+    def show_dashboard(self, user_data):  # Ahora recibimos el objeto 'user_data' completo
         """Mostrar el dashboard según el tipo de usuario"""
         if self.current_frame:
             self.current_frame.destroy()
             self.current_frame = None  # Buena práctica para limpiar la referencia
 
+        user_type = user_data["tipo"]  # Obtenemos el tipo de usuario del diccionario user_data
+
         if user_type == "admin":
             from ui.admin.dashboard import AdminDashboard
+            # Para el dashboard de administrador, se sigue pasando self.current_user (el diccionario completo)
             self.current_frame = AdminDashboard(self, self.current_user)
 
         elif user_type == "medico":
-            # ====> LA SOLUCIÓN ESTÁ AQUÍ <====
             from ui.medicos.dashboard import MedicoDashboard
-            from controllers.med_controller import obtener_medico_id_por_usuario_id  # 1. Importamos la función
+            # Importamos la función necesaria desde el controlador
+            from controllers.med_controller import obtener_medico_id_por_usuario_id
 
-            usuario_id = self.current_user["id"]
+            usuario_id = self.current_user["id"]  # Obtenemos el ID de usuario del diccionario current_user
 
-            # 2. Usamos la función para "traducir" el ID de usuario al ID de médico
+            # Usamos la función para obtener el ID de médico real a partir del ID de usuario
             medico_id_real = obtener_medico_id_por_usuario_id(usuario_id)
-            if medico_id_real:
-                # 3. Si encontramos el ID, lo pasamos al dashboard. ¡Este es el ID correcto!
-                self.current_frame = MedicoDashboard(self, medico_id_real)
-            else:
-                # 4. Si no, significa que algo anda mal (un usuario tipo 'medico' sin perfil de médico).
-                #    Mostramos un error y no cargamos el dashboard.
-                messagebox.showerror("Error de Perfil",
-                                     "Este usuario no está registrado en ninguna institución, comunicarse con administración.")
 
-                # Crear un pequeño frame con un botón "Volver al Inicio de Sesión"
+            if medico_id_real:
+                # Si se encuentra el ID de médico real, se pasa el objeto user_data completo al MedicoDashboard.
+                # El MedicoDashboard ahora espera este diccionario para acceder a sus propios datos de usuario.
+                self.current_frame = MedicoDashboard(self, user_data)  # Pasar user_data completo
+            else:
+                # Si no se encuentra un perfil de médico asociado, se muestra un mensaje de error
+                # y se ofrece la opción de volver al inicio de sesión.
+                messagebox.showerror("Error de Perfil",
+                                     "Este usuario no está registrado como médico. Por favor, comuníquese con administración.",
+                                     parent=self)  # Agregado parent=self para que el messagebox sea modal a la app
+
+                # Crear un frame con un botón "Volver al Inicio de Sesión"
                 error_frame = tk.Frame(self)
                 error_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -106,19 +114,22 @@ class App(tk.Tk):
                 self.current_user = None
                 self.current_frame = error_frame
 
-
         elif user_type == "paciente":
             from ui.pacientes.dashboard import PacienteDashboard
-            self.current_frame = PacienteDashboard(self, paciente_id=self.current_user['id'])
+            # Para el dashboard de paciente, se sigue pasando el objeto user_data completo.
+            self.current_frame = PacienteDashboard(self, user_data)
 
         elif user_type == "institucion":
             from ui.institucion.dashboard import InstitucionMainDashboard
+            # Para el dashboard de institución, se sigue pasando self.current_user.
             self.current_frame = InstitucionMainDashboard(self, self.current_user)
 
         # Empaquetamos el frame solo si se creó uno
         if self.current_frame:
             self.current_frame.pack(fill=tk.BOTH, expand=True)
-    
+
+    # ------------------- FIN DE CAMBIOS Y RESTAURACIÓN DE LÓGICA -------------------
+
     def logout(self):
         """Cerrar sesión"""
         self.current_user = None
