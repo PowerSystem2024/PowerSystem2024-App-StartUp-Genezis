@@ -134,3 +134,4 @@ class App(tk.Tk):
         """Cerrar sesión"""
         self.current_user = None
         self.show_login()
+

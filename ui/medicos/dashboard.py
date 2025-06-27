@@ -1,11 +1,4 @@
 from tkinter import *
-from ui.medicos.agenda import AgendaMedicoFrame
-from ui.medicos.horarios import HorariosFrame
-from ui.medicos.pacientes import PacientesFrame
-
-# Reemplaza el contenido de tu archivo de dashboard de médico con esto
-
-from tkinter import *
 from tkinter import messagebox
 from ui.medicos.agenda import AgendaMedicoFrame
 from ui.medicos.horarios import HorariosFrame
@@ -35,14 +28,16 @@ class MedicoDashboard(Frame):
         Label(self, text=f"Panel Médico - Dr(a). {self.user_data.get('apellido')}", font=("Arial", 18, "bold")).pack(
             pady=10)
 
-        Button(self, text="Ver Agenda", width=25, command=self.mostrar_agenda).pack(pady=5)
-        Button(self, text="Configurar Horarios", width=25, command=self.mostrar_horarios).pack(pady=5)
-        Button(self, text="Ver Pacientes", width=25, command=self.mostrar_pacientes).pack(pady=5)
+        # --- INICIO DE MODIFICACIÓN: Contenedor para botones horizontales ---
+        button_frame = Frame(self)
+        button_frame.pack(pady=10) # Agrupamos los botones en un frame
 
-        # --- NUEVO BOTÓN ---
-        Button(self, text="Editar Mis Datos", width=25, command=self.mostrar_ventana_datos).pack(pady=5)
-
-        Button(self, text="Cerrar Sesión", width=25, command=self.parent.logout).pack(pady=5)
+        Button(button_frame, text="Ver Agenda", width=18, command=self.mostrar_agenda).pack(side=LEFT, padx=5)
+        Button(button_frame, text="Configurar Horarios", width=18, command=self.mostrar_horarios).pack(side=LEFT, padx=5)
+        Button(button_frame, text="Ver Pacientes", width=18, command=self.mostrar_pacientes).pack(side=LEFT, padx=5)
+        Button(button_frame, text="Editar Mis Datos", width=18, command=self.mostrar_ventana_datos).pack(side=LEFT, padx=5)
+        Button(button_frame, text="Cerrar Sesión", width=18, command=self.parent.logout).pack(side=LEFT, padx=5)
+        # --- FIN DE MODIFICACIÓN ---
 
         self.subframe_container = Frame(self)
         self.subframe_container.pack(fill=BOTH, expand=True, padx=10, pady=10)
