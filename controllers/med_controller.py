@@ -1,161 +1,144 @@
-# controllers/med_controller.py
-
 import os
-from dotenv import load_dotenv
 from supabase import create_client
-from utils.date_utils import fecha_hora_actual_utc  # Importamos la función utilitaria para obtener la fecha y hora actual en UTC en formato ISO
+from dotenv import load_dotenv
 
-# Cargar variables de entorno
 load_dotenv()
+supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Horarios
 
+def obtener_horarios_disponibles(medico_id):
+    return supabase.table("horarios_disponibles").select("*").eq("medico_id", medico_id).execute().data
 
-# ================================
-# CRUD MÉDICOS
-# ================================
-
-def crear_medico(usuario_id, institucion_id, especialidad, matricula, duracion_turno):
-    data = {
-        "usuario_id": usuario_id,
-        "institucion_id": institucion_id,
-        "especialidad": especialidad,
-        "matricula": matricula,
-        "duracion_turno": duracion_turno,
-        # Usamos la función utilitaria para asignar la fecha y hora actual UTC en formato ISO
-        "creado_en": fecha_hora_actual_utc()
-    }
-    return supabase.table("medicos").insert(data).execute().data
-
-def obtener_medico_id_por_usuario_id(usuario_id: str) -> str | None:
+def agregar_horario_disponible(medico_id, fecha, inicio, fin):
     """
-    Busca en la tabla 'medicos' y devuelve el ID del médico (PK)
-    basado en el ID del usuario (FK).
-    Devuelve el ID del médico si se encuentra, o None si no.
+    Agrega un nuevo horario disponible, pero solo si no existe ya uno
+    idéntico para el mismo médico, fecha y hora de inicio.
     """
-    if not usuario_id:
-        return None
+    # --- INICIO DE LA MODIFICACIÓN ---
 
-    try:
-        # Usamos .select("id") para traer solo la columna que necesitamos. Es más eficiente.
-        # Usamos .single() para asegurarnos de que solo esperamos un resultado.
-        response = supabase.table("medicos") \
-            .select("id") \
-            .eq("usuario_id", usuario_id) \
-            .single() \
-            .execute()
-
-        # Si la consulta encuentra datos, devolvemos el 'id' del médico.
-        if response.data:
-            return response.data.get('id')
-        else:
-            # No se encontró un médico con ese usuario_id
-            return None
-    except Exception as e:
-        # Imprimimos el error en la consola del servidor para depuración
-        print(f"Error al buscar médico por usuario_id ({usuario_id}): {e}")
-        return None
-
-
-def obtener_medicos():
-    return supabase.table("medicos").select("*").execute().data
-
-
-def actualizar_medico(medico_id, nuevos_datos):
-    # Actualizamos la fecha y hora de la última modificación usando la función utilitaria
-    nuevos_datos["actualizado_en"] = fecha_hora_actual_utc()
-    return supabase.table("medicos").update(nuevos_datos).eq("id", medico_id).execute().data
-
-
-def eliminar_medico(medico_id):
-    return supabase.table("medicos").delete().eq("id", medico_id).execute().data
-
-
-# ================================
-# AGENDA Y TURNOS
-# ================================
-
-def obtener_turnos_del_dia(medico_id, fecha):
-    return supabase.table("turnos") \
-        .select("*") \
+    # 1. Verificar si ya existe un horario idéntico.
+    #    Buscamos un registro con el mismo medico_id, fecha_horario y hora_inicio.
+    existente = supabase.table("horarios_disponibles") \
+        .select("id") \
         .eq("medico_id", medico_id) \
-        .eq("fecha", fecha) \
-        .neq("estado", "cancelado") \
+        .eq("fecha_horario", fecha) \
+        .eq("hora_inicio", inicio) \
         .execute().data
 
+    # 2. Si la lista 'existente' no está vacía, significa que el horario ya existe.
+    #    En este caso, no hacemos nada y retornamos una lista vacía para indicar
+    #    que la operación no fue exitosa.
+    if existente:
+        print(f"Intento de agregar horario duplicado para médico {medico_id} en {fecha} a las {inicio}")
+        return [] # Retornamos lista vacía para ser consistentes con Supabase en caso de "fallo"
 
-def completar_turno(turno_id, notas_consulta):
-    return supabase.table("turnos") \
-        .update({
-        "estado": "completado",
-        "notas": notas_consulta,
-        # Actualizamos la fecha y hora de la modificación con la función utilitaria
-        "actualizado_en": fecha_hora_actual_utc()
-    }) \
-        .eq("id", turno_id).execute().data
-
-
-def cancelar_turno(turno_id):
-    return supabase.table("turnos") \
-        .update({
-        "estado": "cancelado",
-        # Actualizamos la fecha y hora de la modificación con la función utilitaria
-        "actualizado_en": fecha_hora_actual_utc()
-    }) \
-        .eq("id", turno_id).execute().data
-
-
-# ================================
-# DISPONIBILIDAD HORARIA
-# ================================
-
-def agregar_horario_disponible(medico_id, dia_semana, hora_inicio, hora_fin):
-    data = {
+    # 3. Si no existe, procedemos con la inserción.
+    return supabase.table("horarios_disponibles").insert({
         "medico_id": medico_id,
-        "dia_semana": dia_semana,
-        "hora_inicio": hora_inicio,
-        "hora_fin": hora_fin,
-        "activo": True,
-        # Usamos la función utilitaria para guardar la fecha y hora actual en UTC
-        "creado_en": fecha_hora_actual_utc()
-    }
-    return supabase.table("horarios_disponibles").insert(data).execute().data
-
+        "fecha_horario": fecha,
+        "hora_inicio": inicio,
+        "hora_fin": fin
+    }).execute().data
 
 def eliminar_horario_disponible(horario_id):
     return supabase.table("horarios_disponibles").delete().eq("id", horario_id).execute().data
 
+#Turnos
 
-def obtener_horarios_disponibles(medico_id):
-    return supabase.table("horarios_disponibles").select("*") \
-        .eq("medico_id", medico_id) \
-        .eq("activo", True).execute().data
+def obtener_todos_los_turnos(medico_id):
+    """Obtiene todos los turnos de un médico independientemente de la fecha"""
+    return supabase.table("turnos").select("*").eq("medico_id", medico_id).execute().data
 
 
-# ================================
-# PACIENTES ATENDIDOS
-# ================================
+# Agenda
+
+def obtener_turnos_del_dia(medico_id, fecha):
+    return supabase.table("turnos").select("*").eq("medico_id", medico_id).eq("fecha", fecha).execute().data
+
+def completar_turno(turno_id, notas):
+    return supabase.table("turnos").update({"estado": "completado", "notas": notas}).eq("id", turno_id).execute().data
+
+def cancelar_turno(turno_id):
+    return supabase.table("turnos").update({"estado": "cancelado"}).eq("id", turno_id).execute().data
+
+# Pacientes
 
 def obtener_pacientes_por_medico(medico_id):
-    # Busca pacientes únicos que hayan tenido turnos con este médico
-    query = """
-        SELECT DISTINCT p.*
-        FROM turnos t
-        JOIN pacientes p ON t.paciente_id = p.id
-        WHERE t.medico_id = %s
-    """
-    # Como no usamos SQL directo, obtenemos IDs únicos de pacientes desde los turnos
-    turnos = supabase.table("turnos").select("paciente_id").eq("medico_id", medico_id).execute().data
-    paciente_ids = list(set([t["paciente_id"] for t in turnos]))
-
-    pacientes = []
-    for pid in paciente_ids:
-        paciente = supabase.table("pacientes").select("*").eq("id", pid).single().execute().data
-        pacientes.append(paciente)
-    return pacientes
-
+    return supabase.rpc("obtener_pacientes_por_medico", {"mid": medico_id}).execute().data
 
 def obtener_historial_paciente(paciente_id):
     return supabase.table("turnos").select("*").eq("paciente_id", paciente_id).order("fecha", desc=True).execute().data
+
+def obtener_medico_id_por_usuario_id(usuario_id):
+    resultado = supabase.table("medicos").select("id").eq("usuario_id", usuario_id).execute().data
+    return resultado[0]["id"] if resultado else None
+
+def obtener_pacientes_por_medico(medico_id):
+    turnos = supabase.table("turnos").select("paciente_id").eq("medico_id", medico_id).execute().data
+    ids_pacientes = list(set(t["paciente_id"] for t in turnos))
+
+    pacientes = []
+    for pid in ids_pacientes:
+        # Modificado para incluir num_afiliado en la consulta
+        p = supabase.table("pacientes").select("id, usuario_id, obra_social, num_afiliado").eq("id", pid).execute().data
+        if p:
+            u = supabase.table("usuarios").select("nombre, apellido").eq("id", p[0]["usuario_id"]).execute().data
+            # Obtener el último estado del paciente
+            ultimo_turno = supabase.table("turnos").select("estado").eq("paciente_id", pid).order("fecha",
+                                                                                                  desc=True).limit(
+                1).execute().data
+            estado = ultimo_turno[0]["estado"] if ultimo_turno else "-"
+
+            if u:
+                pacientes.append({
+                    "id": p[0]["id"],
+                    "nombre": u[0]["nombre"],
+                    "apellido": u[0]["apellido"],
+                    "obra_social": p[0]["obra_social"],
+                    "numero_afiliado": p[0].get("num_afiliado", "-"),
+                    "estado": estado
+                })
+    return pacientes
+
+# =========================================================
+# SECCIÓN: GESTIÓN DE PERFIL DEL MÉDICO
+# =========================================================
+from utils.date_utils import fecha_hora_actual_utc
+from utils.security_utils import hash_password
+
+def obtener_info_completa_medico(usuario_id):
+    """Obtiene información completa y formateada de un médico."""
+    query = "*, institucion:instituciones(nombre)"
+    resultado = supabase.table("medicos").select(query).eq("usuario_id", usuario_id).limit(1).execute().data
+    return resultado
+
+def obtener_instituciones():
+    """Obtiene todas las instituciones."""
+    return supabase.table("instituciones").select("*").execute().data
+
+def actualizar_usuario(usuario_id, nuevos_datos):
+    """Actualiza los datos de un usuario específico."""
+    nuevos_datos["actualizado_en"] = fecha_hora_actual_utc()
+    return supabase.table("usuarios").update(nuevos_datos).eq("id", usuario_id).execute().data
+
+def actualizar_medico(medico_id, nuevos_datos):
+    """Actualiza los datos de un médico."""
+    nuevos_datos["actualizado_en"] = fecha_hora_actual_utc()
+    return supabase.table("medicos").update(nuevos_datos).eq("id", medico_id).execute().data
+
+def admin_actualizar_password_usuario(usuario_id, nueva_password):
+    """
+    Permite a un admin (o al propio usuario en este contexto) actualizar su contraseña.
+    La contraseña siempre se hashea antes de guardarse.
+    """
+    if not nueva_password:
+        raise ValueError("La nueva contraseña no puede estar vacía.")
+
+    hashed_password = hash_password(nueva_password)
+    datos_actualizados = {
+        "password": hashed_password,
+        "actualizado_en": fecha_hora_actual_utc()
+    }
+    return supabase.table("usuarios").update(datos_actualizados).eq("id", usuario_id).execute().data
+
