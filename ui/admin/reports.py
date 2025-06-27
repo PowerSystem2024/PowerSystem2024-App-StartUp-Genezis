@@ -1,185 +1,157 @@
-# ui/admin/reports.py
-
 import tkinter as tk
 from tkinter import ttk
 
+# Importaciones necesarias para el gráfico
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 
 class ReportsFrame(tk.Frame):
+    """
+    Frame que muestra estadísticas, una tabla y un gráfico de barras responsivo
+    con un layout vertical.
+    """
+
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
+
+        self.chart_canvas = None
+        self.chart_figure = None
+
         self.setup_ui()
 
     def setup_ui(self):
-        # Título
+        """
+        Construye la interfaz con un layout vertical:
+        1. Título
+        2. Sección superior (Estadísticas y Tabla)
+        3. Sección inferior (Gráfico)
+        """
+        # 1. Título principal
         tk.Label(self, text="Reportes y Estadísticas",
-                 font=("Arial", 14, "bold")).pack(pady=10)
+                 font=("Arial", 14, "bold")).pack(pady=10, fill=tk.X)
 
-        # Estadísticas principales
-        self._create_stats_section()
+        # --- INICIO DE LA REESTRUCTURACIÓN DEL LAYOUT ---
 
-        # Tabla resumen
-        self._create_summary_table()
+        # 2. Frame para la sección superior (estadísticas y tabla)
+        top_frame = tk.Frame(self)
+        # Usamos fill=tk.X para que ocupe todo el ancho, pero no se expanda verticalmente
+        top_frame.pack(fill=tk.X, expand=False, padx=20, pady=(0, 10))
 
-    def _create_stats_section(self):
-        stats_frame = tk.LabelFrame(self, text="Estadísticas", font=("Arial", 10, "bold"))
-        stats_frame.pack(fill=tk.X, padx=20, pady=10)
+        # 3. Frame para la sección inferior (el gráfico)
+        # Este sí se expandirá para ocupar el espacio restante
+        chart_container_frame = tk.Frame(self)
+        chart_container_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 10))
 
+        # Vinculamos el evento de redimensionamiento al contenedor del gráfico
+        chart_container_frame.bind("<Configure>", self._on_chart_resize)
+
+        # --- FIN DE LA REESTRUCTURACIÓN ---
+
+        # Ahora poblamos los frames que acabamos de crear
+        self._create_stats_and_table_section(top_frame)
+        self._create_bar_chart(chart_container_frame)
+
+    def _create_stats_and_table_section(self, parent):
+        """
+        Crea un contenedor para las estadísticas y la tabla, uno al lado del otro.
+        Este método ahora organiza la parte superior de la UI.
+        """
+        parent.grid_columnconfigure(0, weight=1)
+        parent.grid_columnconfigure(1, weight=1)
+
+        stats_frame = tk.LabelFrame(parent, text="Estadísticas Clave", font=("Arial", 10, "bold"))
+        stats_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+
+        table_frame = tk.LabelFrame(parent, text="Resumen por Tipo", font=("Arial", 10, "bold"))
+        table_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+
+        # Lógica para poblar las estadísticas
         stats = self._get_stats()
-
-        # Grid de estadísticas (2 columnas)
-        stats_data = [
-            ("Usuarios Totales", stats["usuarios_totales"]),
-            ("Médicos", stats["medicos"]),
-            ("Pacientes", stats["pacientes"]),
-            ("Instituciones", stats["instituciones"]),
-            ("Administradores", stats["admins"])
-        ]
-
+        stats_data = [("Usuarios Totales", stats["usuarios_totales"]), ("Médicos", stats["medicos"]),
+                      ("Pacientes", stats["pacientes"]), ("Instituciones", stats["instituciones"]),
+                      ("Administradores", stats["admins"])]
         for i, (label, value) in enumerate(stats_data):
             row, col = divmod(i, 2)
-
-            item_frame = tk.Frame(stats_frame)
+            item_frame = tk.Frame(stats_frame);
             item_frame.grid(row=row, column=col, padx=10, pady=5, sticky="w")
-
             tk.Label(item_frame, text=f"{label}:", font=("Arial", 9)).pack(side=tk.LEFT)
             tk.Label(item_frame, text=str(value), font=("Arial", 9, "bold")).pack(side=tk.LEFT, padx=(5, 0))
-
-        # Configurar expansión de columnas
-        stats_frame.grid_columnconfigure(0, weight=1)
+        stats_frame.grid_columnconfigure(0, weight=1);
         stats_frame.grid_columnconfigure(1, weight=1)
 
-    def _create_summary_table(self):
-        table_frame = tk.LabelFrame(self, text="Resumen por Tipo", font=("Arial", 10, "bold"))
-        table_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
-
-        # Tabla
-        columns = ("tipo", "cantidad", "porcentaje")
+        # Lógica para poblar la tabla
+        columns = ("tipo", "cantidad", "porcentaje");
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=5)
-
-        for col, text, width in [("tipo", "Tipo", 150), ("cantidad", "Cantidad", 80), ("porcentaje", "Porcentaje", 80)]:
-            self.tree.heading(col, text=text)
+        column_defs = [("tipo", "Tipo", 90), ("cantidad", "Cant.", 50), ("porcentaje", "%", 50)]
+        for col, text, width in column_defs:
+            self.tree.heading(col, text=text);
             self.tree.column(col, width=width, anchor='center' if col != 'tipo' else 'w')
+        self._fill_table();
+        self.tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        self._fill_table()
-        self.tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+    def _on_chart_resize(self, event):
+        """Gestiona el redimensionamiento del gráfico."""
+        if not self.chart_canvas or not hasattr(event, 'width') or event.width < 50 or event.height < 50:
+            return
 
-        # Análisis simple
-        self._create_analysis(table_frame)
+        new_width = event.width / self.chart_figure.dpi
+        new_height = event.height / self.chart_figure.dpi
 
-    def _fill_table(self):
+        self.chart_figure.set_size_inches(new_width, new_height, forward=True)
+        # Ajustamos el layout para evitar que las etiquetas se corten con el nuevo tamaño
+        self.chart_figure.tight_layout()
+        self.chart_canvas.draw_idle()
+
+    def _create_bar_chart(self, parent):
+        """Crea el gráfico de barras para que ocupe el frame padre."""
+        # El LabelFrame ahora está dentro del método para mantenerlo autocontenido
+        chart_labelframe = tk.LabelFrame(parent, text="Distribución de Usuarios", font=("Arial", 10, "bold"))
+        chart_labelframe.pack(fill=tk.BOTH, expand=True)
+
         stats = self._get_stats()
-        total = stats["usuarios_totales"]
+        labels = ['Médicos', 'Pacientes', 'Instituciones', 'Admins']
+        values = [stats.get("medicos", 0), stats.get("pacientes", 0), stats.get("instituciones", 0),
+                  stats.get("admins", 0)]
 
-        self.tree.delete(*self.tree.get_children())
+        plt.style.use('seaborn-v0_8-pastel')
+        self.chart_figure, ax = plt.subplots()
 
-        table_data = [
-            ("Médicos", stats["medicos"]),
-            ("Pacientes", stats["pacientes"]),
-            ("Instituciones", stats["instituciones"]),
-            ("Administradores", stats["admins"])
-        ]
+        bars = ax.bar(labels, values, color=['#66b3ff', '#ff9999', '#99ff99', '#ffcc99'])
 
-        for tipo, cantidad in table_data:
-            porcentaje = f"{(cantidad / total * 100):.1f}%" if total > 0 else "0%"
-            self.tree.insert("", "end", values=(tipo, cantidad, porcentaje))
+        ax.set_ylabel('Cantidad de Usuarios')
+        # Eliminamos el título del gráfico ya que el LabelFrame ya lo tiene
+        # ax.set_title('Usuarios por Tipo')
+        ax.bar_label(bars, padding=3)
+        ax.get_yaxis().set_major_locator(plt.MaxNLocator(integer=True))
+        self.chart_figure.tight_layout()
 
-    def _create_analysis(self, parent):
-        analysis_frame = tk.Frame(parent, relief='solid', bd=1, bg='#f5f5f5')
-        analysis_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
-
-        tk.Label(analysis_frame, text="Análisis:", font=("Arial", 9, "bold"),
-                 bg='#f5f5f5').pack(anchor='w', padx=10, pady=(5, 0))
-
-        analysis_points = self._generate_analysis()
-        for point in analysis_points:
-            tk.Label(analysis_frame, text=f"• {point}", font=("Arial", 8),
-                     bg='#f5f5f5', anchor='w').pack(fill=tk.X, padx=15, pady=1)
-
-        tk.Frame(analysis_frame, height=5, bg='#f5f5f5').pack()
-
-    def _get_stats(self):
-        # Usar el método de estadísticas optimizado del controlador
-        stats = self.controller.obtener_estadisticas_sistema()
-
-        if not stats:
-            return {"usuarios_totales": 0, "medicos": 0, "pacientes": 0, "instituciones": 0, "admins": 0}
-
-        # Adaptamos las estadísticas al formato esperado por la UI
-        return {
-            "usuarios_totales": stats.get("usuarios_totales", 0),
-            "medicos": stats.get("medicos_totales", 0),
-            "pacientes": stats.get("pacientes_totales", 0),
-            "instituciones": stats.get("instituciones_totales", 0),
-            "admins": stats.get("admins_totales", 0)  # Ahora sí tenemos conteo específico de admins
-        }
-
-    def _generate_analysis(self):
-        stats = self._get_stats()
-        analysis = []
-
-        total = stats["usuarios_totales"]
-        medicos = stats["medicos"]
-        pacientes = stats["pacientes"]
-        instituciones = stats["instituciones"]
-
-        # Análisis básico
-        if total == 0:
-            return ["Sistema sin usuarios registrados"]
-
-        if total < 10:
-            analysis.append(f"Sistema inicial ({total} usuarios)")
-        else:
-            analysis.append(f"Sistema activo ({total} usuarios)")
-
-        # Ratio médicos-pacientes
-        if medicos > 0 and pacientes > 0:
-            ratio = round(pacientes / medicos, 1)
-            if ratio < 10:
-                analysis.append(f"Ratio P/M: {ratio}:1 (Buena cobertura)")
-            else:
-                analysis.append(f"Ratio P/M: {ratio}:1 (Considerar más médicos)")
-        elif pacientes > 0 and medicos == 0:
-            analysis.append("Pacientes sin médicos disponibles")
-
-        # Instituciones
-        if instituciones > 0 and medicos > 0:
-            med_por_inst = round(medicos / instituciones, 1)
-            analysis.append(f"Promedio: {med_por_inst} médicos/institución")
-
-        return analysis[:3]  # Máximo 3 puntos
+        self.chart_canvas = FigureCanvasTkAgg(self.chart_figure, master=chart_labelframe)
+        self.chart_canvas.draw()
+        self.chart_canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
 
     def refresh_data(self):
-        """Actualiza los datos de la interfaz sin reconstruir toda la UI"""
-        # Obtenemos las estadísticas actualizadas
-        stats = self._get_stats()
-
-        # Actualizamos la sección de estadísticas
+        """Actualiza todos los datos de la interfaz reconstruyéndola."""
         for widget in self.winfo_children():
-            if isinstance(widget, tk.LabelFrame) and widget.cget("text") == "Estadísticas":
-                for child in widget.winfo_children():
-                    if isinstance(child, tk.Frame):
-                        for label in child.winfo_children():
-                            if isinstance(label, tk.Label) and label.cget("font") == ("Arial", 9, "bold"):
-                                # Encontramos una etiqueta de valor
-                                label_text = label.cget("text")
-                                for key, value in stats.items():
-                                    if key in label_text.lower():
-                                        label.config(text=str(value))
-                                        break
+            widget.destroy()
+        self.setup_ui()
 
-        # Actualizamos la tabla
-        self._fill_table()
+    def _fill_table(self):
+        """Rellena la tabla con datos actualizados."""
+        stats = self._get_stats();
+        total = stats["usuarios_totales"];
+        self.tree.delete(*self.tree.get_children())
+        table_data = [("Médicos", stats["medicos"]), ("Pacientes", stats["pacientes"]),
+                      ("Instituciones", stats["instituciones"]), ("Administradores", stats["admins"])]
+        for tipo, cantidad in table_data:
+            porcentaje = f"{(cantidad / total * 100):.1f}%" if total > 0 else "0%";
+            self.tree.insert("", "end", values=(tipo, cantidad, porcentaje))
 
-        # Actualizamos el análisis
-        for widget in self.winfo_children():
-            if isinstance(widget, tk.LabelFrame) and widget.cget("text") == "Resumen por Tipo":
-                for child in widget.winfo_children():
-                    if isinstance(child, tk.Frame) and child.cget("relief") == "solid":
-                        for label in child.winfo_children():
-                            if isinstance(label, tk.Label) and "•" in label.cget("text"):
-                                label.destroy()
-                        analysis_points = self._generate_analysis()
-                        for point in analysis_points:
-                            tk.Label(child, text=f"• {point}", font=("Arial", 8),
-                                     bg='#f5f5f5', anchor='w').pack(fill=tk.X, padx=15, pady=1)
+    def _get_stats(self):
+        """Obtiene estadísticas del controlador."""
+        stats = self.controller.obtener_estadisticas_sistema()
+        if not stats: return {"usuarios_totales": 0, "medicos": 0, "pacientes": 0, "instituciones": 0, "admins": 0}
+        return {"usuarios_totales": stats.get("usuarios_totales", 0), "medicos": stats.get("medicos_totales", 0),
+                "pacientes": stats.get("pacientes_totales", 0), "instituciones": stats.get("instituciones_totales", 0),
+                "admins": stats.get("admins_totales", 0)}
