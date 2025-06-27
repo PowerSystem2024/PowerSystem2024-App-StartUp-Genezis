@@ -1,6 +1,9 @@
 from tkinter import *
 from tkinter import messagebox
 from controllers.pac_controller import get_paciente_por_usuario_id, update_paciente
+from tkcalendar import DateEntry
+from datetime import datetime
+from tkinter import ttk
 
 
 class PerfilFrame(Frame):
@@ -32,7 +35,37 @@ class PerfilFrame(Frame):
 
         for idx, (label, var) in enumerate(self.campos.items()):
             Label(self, text=label + ":").grid(row=idx + 1, column=0, sticky=E, padx=5, pady=2)
-            entry = Entry(self, textvariable=var, width=40)
+
+            if label == "Fecha de Nacimiento":
+                entry = DateEntry(self, width=37, date_pattern="yyyy-mm-dd")
+                entry.config(state=DISABLED)
+
+
+            elif label == "Género":
+
+                opciones_genero = ["Masculino", "Femenino", "Otro"]
+
+                entry = ttk.Combobox(self, textvariable=var, values=opciones_genero, state="readonly", width=37)
+
+                entry.config(state="disabled")
+
+            elif label == "Obra Social / Seguro":
+                obras_sociales = [
+                    "OSDE", "Swiss Medical", "Galeno", "Medifé", "Omint",
+                    "PAMI", "IOMA", "Federada", "Sancor Salud", "Prevención Salud"
+                ]
+                entry = ttk.Combobox(self, textvariable=var, values=obras_sociales, state="readonly", width=37)
+                entry.config(state="disabled")
+
+
+            else:
+                entry = Entry(self, textvariable=var, width=40)
+                entry.config(state=DISABLED)
+
+            entry.grid(row=idx + 1, column=1, sticky="ew", padx=10, pady=5)
+            self.grid_columnconfigure(1, weight=1)
+
+            self.entries[label] = entry
 
             if label in ["ID", "Fecha de Creación", "Última Modificación"]:
                 entry.config(state=DISABLED)
@@ -43,9 +76,8 @@ class PerfilFrame(Frame):
             self.entries[label] = entry
 
         # Botón para guardar cambios (lo creamos pero NO lo mostramos al inicio)
+
         self.btn_guardar = Button(self, text="Guardar Cambios", command=self.guardar_cambios)
-
-
 
         # Botón "Editar Datos"
         Button(self, text="Editar Datos", command=self.habilitar_edicion).grid(
@@ -57,21 +89,33 @@ class PerfilFrame(Frame):
             row=len(self.campos) + 3, column=0, columnspan=2, pady=5
         )
 
+        # Llamada para cargar los datos del paciente
         self.obtener_datos_desde_supabase(self.paciente_id)
-
 
     def cargar_datos(self, paciente):
             self.campos["Nombres"].set(paciente.get("nombre", ""))
             self.campos["Apellidos"].set(paciente.get("apellido", ""))
-            self.campos["Fecha de Nacimiento"].set(paciente.get("fecha_nacimiento", ""))
+            fecha_str = paciente.get("fecha_nacimiento", "")
+            if fecha_str:
+                try:
+                    fecha_dt = datetime.strptime(fecha_str, "%Y-%m-%d")
+                    self.entries["Fecha de Nacimiento"].set_date(fecha_dt)
+                except ValueError:
+                    pass  # en caso de que el formato no sea válido
+
             self.campos["Teléfono"].set(paciente.get("telefono", ""))
             self.campos["Género"].set(paciente.get("genero", ""))
             self.campos["Obra Social / Seguro"].set(paciente.get("obra_social", ""))
             self.campos["Número de Afiliado"].set(paciente.get("num_afiliado", ""))
 
-
     def obtener_datos(self):
-        return {campo: var.get() for campo, var in self.campos.items()}
+        datos = {}
+        for campo, var in self.campos.items():
+            if campo == "Fecha de Nacimiento":
+                datos[campo] = self.entries[campo].get()  # Obtenemos directamente del DateEntry
+            else:
+                datos[campo] = var.get()
+        return datos
 
     def guardar_cambios(self):
         if not self.paciente_id:
@@ -84,7 +128,8 @@ class PerfilFrame(Frame):
             "fecha_nacimiento": datos["Fecha de Nacimiento"],
             "genero": datos["Género"],
             "obra_social": datos["Obra Social / Seguro"],
-            "telefono": datos["Teléfono"]
+            "telefono": datos["Teléfono"],
+            "num_afiliado": datos["Número de Afiliado"]
         }
 
         try:
@@ -105,10 +150,10 @@ class PerfilFrame(Frame):
     def habilitar_edicion(self):
         campos_editables = [
             "Nombres", "Apellidos", "Fecha de Nacimiento", "Teléfono",
-            "Género", "Obra Social / Seguro"
+            "Género", "Obra Social / Seguro", "Número de Afiliado"
         ]
         for campo in campos_editables:
-            self.entries[campo].config(state=NORMAL)
+            self.entries[campo].config(state="normal")
         self.modo_edicion = True
         self.btn_guardar.grid(row=len(self.campos) + 1, column=0, columnspan=2, pady=10)
 

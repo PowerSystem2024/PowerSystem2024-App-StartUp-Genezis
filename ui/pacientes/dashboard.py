@@ -22,6 +22,7 @@ class PacienteDashboard(Frame):
 
         Button(self.main_container, text="Mis Datos", width=25, command=self.mostrar_perfil).pack(pady=5)
         Button(self.main_container, text="Mis Turnos", width=25, command=self.mostrar_turnos).pack(pady=5)
+        Button(self.main_container, text="Cerrar Sesión", width=25, command=self.cerrar_sesion).pack(pady=20)
 
         self.current_subframe = None
 
@@ -48,3 +49,13 @@ class PacienteDashboard(Frame):
     def mostrar_dashboard(self):
         self.limpiar_subframe()
         self.main_container.pack(side=TOP, anchor=N, pady=50)  # <-- fuerza que se muestre arriba
+
+    def cerrar_sesion(self):
+        # Limpiamos el dashboard y llamamos al callback para volver al login
+        self.limpiar_subframe()
+        self.ocultar_dashboard()
+        if self.volver_callback:
+            self.volver_callback()
+
+
+
