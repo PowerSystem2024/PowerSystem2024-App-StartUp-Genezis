@@ -13,7 +13,7 @@ class App(tk.Tk):
         self.title("Sistema de Turnos Médicos")
 
         # Establecer dimensiones de la ventana
-        window_width = 895
+        window_width = 1000
         window_height = 587
 
         # Obtener dimensiones de la pantalla
