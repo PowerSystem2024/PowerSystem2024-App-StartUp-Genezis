@@ -118,11 +118,15 @@ class HorariosFrame(Frame):
             # Agregar el horario usando la fecha en lugar del día de la semana
             resultado = agregar_horario_disponible(self.medico_id, fecha, hi, hf)
 
+            # --- INICIO DE LA MODIFICACIÓN ---
             if resultado:
                 messagebox.showinfo("Éxito", "Horario agregado correctamente")
                 self.cargar_horarios()
             else:
-                messagebox.showerror("Error", "No se pudo agregar el horario")
+                # Ahora este 'else' se activará si el horario ya existe o si hubo otro error.
+                messagebox.showerror("Error", "No se pudo agregar el horario. ¡Es posible que ya exista!")
+            # --- FIN DE LA MODIFICACIÓN ---
+
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error: {str(e)}")
 

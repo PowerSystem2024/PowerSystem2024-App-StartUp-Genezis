@@ -11,6 +11,29 @@ def obtener_horarios_disponibles(medico_id):
     return supabase.table("horarios_disponibles").select("*").eq("medico_id", medico_id).execute().data
 
 def agregar_horario_disponible(medico_id, fecha, inicio, fin):
+    """
+    Agrega un nuevo horario disponible, pero solo si no existe ya uno
+    idéntico para el mismo médico, fecha y hora de inicio.
+    """
+    # --- INICIO DE LA MODIFICACIÓN ---
+
+    # 1. Verificar si ya existe un horario idéntico.
+    #    Buscamos un registro con el mismo medico_id, fecha_horario y hora_inicio.
+    existente = supabase.table("horarios_disponibles") \
+        .select("id") \
+        .eq("medico_id", medico_id) \
+        .eq("fecha_horario", fecha) \
+        .eq("hora_inicio", inicio) \
+        .execute().data
+
+    # 2. Si la lista 'existente' no está vacía, significa que el horario ya existe.
+    #    En este caso, no hacemos nada y retornamos una lista vacía para indicar
+    #    que la operación no fue exitosa.
+    if existente:
+        print(f"Intento de agregar horario duplicado para médico {medico_id} en {fecha} a las {inicio}")
+        return [] # Retornamos lista vacía para ser consistentes con Supabase en caso de "fallo"
+
+    # 3. Si no existe, procedemos con la inserción.
     return supabase.table("horarios_disponibles").insert({
         "medico_id": medico_id,
         "fecha_horario": fecha,
