@@ -4,6 +4,10 @@ from ui.loginInterface import LoginInterface
 from ui.register import RegisterFrame
 
 
+# No es necesario importar MedicoDashboard, PacienteDashboard, etc. aquí
+# Se importan dentro de show_dashboard cuando se necesitan para evitar importaciones circulares.
+
+
 class App(tk.Tk):
     """Aplicación principal"""
 
@@ -14,6 +18,7 @@ class App(tk.Tk):
         self.title("Sistema de Turnos Médicos")
 
         # Establecer dimensiones de la ventana
+        # --- FUSIÓN: Se toma el window_width de la RAMA MAIN (1000) ---
         window_width = 1000
         window_height = 587
 
@@ -59,13 +64,13 @@ class App(tk.Tk):
         self.current_frame = LoginInterface(self, self.on_login_success)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
 
-    # ------------------ INICIO DE CAMBIOS Y RESTAURACIÓN DE LÓGICA ------------------
+    # ------------------ INICIO DE CAMBIOS UNIFICADOS ------------------
     def on_login_success(self, user):
         """Callback cuando el login es exitoso"""
         self.current_user = user  # Almacenamos el objeto 'user' completo
 
+        # --- FUSIÓN: Se toma la lógica de pasar el objeto 'user' completo (RAMA MAIN) ---
         # Mostrar el panel correspondiente según el tipo de usuario
-        # ¡IMPORTANTE! Pasamos el objeto 'user' completo a show_dashboard
         self.show_dashboard(user)
 
     def show_dashboard(self, user_data):  # Ahora recibimos el objeto 'user_data' completo
@@ -78,31 +83,26 @@ class App(tk.Tk):
 
         if user_type == "admin":
             from ui.admin.dashboard import AdminDashboard
-            # Para el dashboard de administrador, se sigue pasando self.current_user (el diccionario completo)
             self.current_frame = AdminDashboard(self, self.current_user)
 
         elif user_type == "medico":
             from ui.medicos.dashboard import MedicoDashboard
-            # Importamos la función necesaria desde el controlador
+            # --- FUSIÓN: Se restaura la lógica original de verificación de medico_id (RAMA PACIENTE) ---
             from controllers.med_controller import obtener_medico_id_por_usuario_id
 
-            usuario_id = self.current_user["id"]  # Obtenemos el ID de usuario del diccionario current_user
+            usuario_id = self.current_user["id"]
 
-            # Usamos la función para obtener el ID de médico real a partir del ID de usuario
             medico_id_real = obtener_medico_id_por_usuario_id(usuario_id)
-
             if medico_id_real:
-                # Si se encuentra el ID de médico real, se pasa el objeto user_data completo al MedicoDashboard.
-                # El MedicoDashboard ahora espera este diccionario para acceder a sus propios datos de usuario.
-                self.current_frame = MedicoDashboard(self, user_data)  # Pasar user_data completo
+                # --- FUSIÓN: Ahora se pasa el objeto 'user_data' completo al MedicoDashboard ---
+                # Esto resuelve el TypeError en MedicoDashboard.__init__
+                self.current_frame = MedicoDashboard(self, user_data)
             else:
-                # Si no se encuentra un perfil de médico asociado, se muestra un mensaje de error
-                # y se ofrece la opción de volver al inicio de sesión.
+                # --- FUSIÓN: Se mantiene el manejo de error de perfil inválido (RAMA PACIENTE) ---
                 messagebox.showerror("Error de Perfil",
                                      "Este usuario no está registrado como médico. Por favor, comuníquese con administración.",
-                                     parent=self)  # Agregado parent=self para que el messagebox sea modal a la app
+                                     parent=self)  # Se agregó parent=self para messagebox
 
-                # Crear un frame con un botón "Volver al Inicio de Sesión"
                 error_frame = tk.Frame(self)
                 error_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -110,28 +110,27 @@ class App(tk.Tk):
                 tk.Button(error_frame, text="Volver al Inicio de Sesión", font=("Arial", 12),
                           command=lambda: [error_frame.destroy(), self.show_login()]).pack(pady=10)
 
-                # Limpiamos cualquier indicador de sesión para mayor seguridad
                 self.current_user = None
                 self.current_frame = error_frame
 
         elif user_type == "paciente":
             from ui.pacientes.dashboard import PacienteDashboard
-            # Para el dashboard de paciente, se sigue pasando el objeto user_data completo.
-            self.current_frame = PacienteDashboard(self, user_data)
+            # --- CAMBIO IMPORTANTE AQUÍ: Se corrige el TypeError ---
+            # Se pasa el 'paciente_id' explícitamente, extraído de user_data['id'].
+            # Esto se alinea con la firma esperada por el constructor de PacienteDashboard.
+            self.current_frame = PacienteDashboard(self, paciente_id=user_data['id'], volver_callback=self.logout)
 
         elif user_type == "institucion":
             from ui.institucion.dashboard import InstitucionMainDashboard
-            # Para el dashboard de institución, se sigue pasando self.current_user.
             self.current_frame = InstitucionMainDashboard(self, self.current_user)
 
         # Empaquetamos el frame solo si se creó uno
         if self.current_frame:
             self.current_frame.pack(fill=tk.BOTH, expand=True)
 
-    # ------------------- FIN DE CAMBIOS Y RESTAURACIÓN DE LÓGICA -------------------
+    # ------------------- FIN DE CAMBIOS UNIFICADOS -------------------
 
     def logout(self):
         """Cerrar sesión"""
         self.current_user = None
         self.show_login()
-
