@@ -28,7 +28,7 @@ class AdminDashboard(tk.Frame):
         header = tk.Frame(self, bg="#2c3e50", height=50)
         header.pack(fill=tk.X)
         header.pack_propagate(False)
-        tk.Label(header, text=f"🛠️ Panel de Administrador - {self.user_data['nombre']}",
+        tk.Label(header, text=f"Panel de Administrador - {self.user_data['nombre']}",
                  font=("Arial", 14, "bold"), fg="white", bg="#2c3e50").pack(pady=12)
 
     def _create_main_container(self):
@@ -41,22 +41,22 @@ class AdminDashboard(tk.Frame):
         sidebar.pack_propagate(False)
 
         menu_items = [
-            ("👥 Usuarios", self.show_users_panel, "#3498db"),
-            ("📊 Reportes", self.show_reports_panel, "#27ae60"),
-            ("🏥 Agregar Institucion", self.agregar_institucion, "#f39c12"),
-            ("🧑‍🤝‍🧑 Agregar Paciente", self.agregar_paciente, "#8e44ad"),
-            ("🧑‍⚕️ Agregar Médico", self.agregar_medico, "#1abc9c"),
-            ("👑 Registrar Admin", self.agregar_admin, "#FF5733"),
-            ("🚪 Cerrar Sesión", self.logout, "#e74c3c")
+            ("Usuarios", self.show_users_panel, "#3498db"),
+            ("Reportes", self.show_reports_panel, "#27ae60"),
+            ("Agregar Institucion", self.agregar_institucion, "#f39c12"),
+            ("Agregar Paciente", self.agregar_paciente, "#8e44ad"),
+            ("Agregar Médico", self.agregar_medico, "#1abc9c"),
+            ("Registrar Admin", self.agregar_admin, "#FF5733"),
+            ("Cerrar Sesión", self.logout, "#e74c3c")
         ]
 
         for text, command, color in menu_items:
-            is_action_button = text in ["🏥 Agregar Institucion", "🧑‍🤝‍🧑 Agregar Paciente", "🧑‍⚕️ Agregar Médico",
-                                        "👑 Registrar Admin", "🚪 Cerrar Sesión"]
+            is_action_button = text in ["Agregar Institucion", "Agregar Paciente", "️Agregar Médico",
+                                        "Registrar Admin", "Cerrar Sesión"]
             btn = self._create_menu_button(sidebar, text, command, color, is_action_button)
             if not is_action_button:
                 self.menu_buttons[text] = btn
-        self._set_active_button("👥 Usuarios")
+        self._set_active_button("Usuarios")
 
     def _create_menu_button(self, parent, text, command, color, is_action_button=False):
         def on_click():
@@ -100,14 +100,14 @@ class AdminDashboard(tk.Frame):
     def show_users_panel(self):
         from ui.admin.users import UsersFrame
         self.clear_content()
-        self._create_section_header("👥 Gestión de Usuarios")
+        self._create_section_header("Gestión de Usuarios")
         frame = UsersFrame(self.content_frame, self.controller)
         frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
 
     def show_reports_panel(self):
         from ui.admin.reports import ReportsFrame
         self.clear_content()
-        self._create_section_header("📊 Reportes y Estadísticas")
+        self._create_section_header("Reportes y Estadísticas")
         frame = ReportsFrame(self.content_frame, self.controller)
         frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
 

@@ -97,7 +97,7 @@ class LoginInterface(Frame):
                 590.0,
                 182.0,
                 anchor="nw",
-                text="Turnos Medicos",
+                text="Turnos Médicos",
                 fill="#000000",
                 font=("Inter SemiBold", 24)
             )
