@@ -35,6 +35,9 @@ Está pensado para ser escalable y adaptable a instituciones reales.
 * Historial clínico por paciente.
 * Alta, baja y edición de usuarios, médicos, instituciones y especialidades.
 * Control visual desde paneles tipo dashboard.
+* Validación de datos en tiempo real.
+* Filtrado de turnos por fecha y estado.
+* Prevención de superposición de horarios.
 
 ---
 
@@ -126,38 +129,78 @@ Está pensado para ser escalable y adaptable a instituciones reales.
 
 ### Tablas principales:
 
-| Tabla                  | Descripción                                              |
-| ---------------------- | -------------------------------------------------------- |
-| `usuarios`             | Contiene datos base (nombre, mail, tipo de usuario)      |
-| `medicos`              | Relacionado a usuarios, incluye especialidad y matrícula |
-| `pacientes`            | Datos personales, obra social, relación con usuarios     |
-| `turnos`               | Fecha, hora, estado y notas, médico y paciente           |
-| `horarios_disponibles` | Días/horarios donde el médico puede atender              |
-| `especialidades`       | Lista predeterminada de especialidades médicas           |
+| Tabla                  | Descripción                                                |
+| ---------------------- | ---------------------------------------------------------- |
+| `usuarios`             | Datos base (nombre, mail, tipo\_usuario, etc.)             |
+| `medicos`              | Datos personales, matrícula, especialidad, duración\_turno |
+| `pacientes`            | Información médica, contacto y afiliación                  |
+| `turnos`               | Fecha, hora, motivo de consulta, estado, notas             |
+| `horarios_disponibles` | Fecha, hora\_inicio, hora\_fin, validación                 |
+| `instituciones`        | Datos de instituciones y sus usuarios                      |
+| `especialidades`       | Catálogo de especialidades médicas                         |
 
-Relaciones principales:
+### Relaciones principales:
 
 * `medicos.usuario_id` → `usuarios.id`
 * `pacientes.usuario_id` → `usuarios.id`
+* `medicos.institucion_id` → `instituciones.id`
 * `turnos.medico_id` → `medicos.id`
 * `turnos.paciente_id` → `pacientes.id`
+* `horarios_disponibles.medico_id` → `medicos.id`
+---
+
+## 🎛️ Funcionalidades por panel
+
+### 👤 Panel Médico
+
+* Visualizar turnos del día actual
+* Confirmar, cancelar y completar turnos
+* Agregar y editar horarios de disponibilidad
+* Evitar solapamiento de horarios duplicados
+* Historial de turnos por paciente
+
+### 🧑‍⚕️ Panel Paciente
+
+* Buscar médicos por especialidad
+* Reservar turnos con horarios disponibles
+* Cancelar turnos próximos
+* Visualizar historial de turnos
+* Consultar estado (pendiente, completado, cancelado)
+
+### 🏥 Panel Institución
+
+* Crear, editar y eliminar instituciones
+* Gestionar médicos asociados
+* Visualizar agenda médica por especialidad
+* Consultar estadísticas de turnos
+
+### 👨‍💼 Panel Administrador
+
+* Ver todos los usuarios y su rol
+* Editar o eliminar instituciones
+* Generar reportes globales
+* Control general del sistema
 
 ---
 
-## 👤 Panel Médico - Funcionalidades Detalladas
+## 📆 Sprints y metodología Scrum
 
-* Visualización de turnos del día actual.
-* Confirmar o cancelar turnos.
-* Establecer nuevos horarios de disponibilidad.
-* Validación para evitar superposición de horarios.
-* Edición de horarios existentes.
-* Consulta del historial de turnos de cada paciente.
+El desarrollo se llevó a cabo en un Sprint extendido de 30 días, luego dividido formalmente en dos sprints de 15 días cada uno, aplicando la metodología Scrum para una entrega colaborativa, organizada y funcional.
 
-### Validaciones implementadas:
+### 🏁 Sprint 1 - Fundamentos (1 al 15 de junio)
 
-* No permitir guardar horarios duplicados.
-* Mostrar mensaje claro si ya existe un turno igual.
-* Validar que hora de fin sea posterior a la de inicio.
+* Autenticación de usuarios (registro y login)
+* Estructura de base de datos y conexión con Supabase
+* Implementación de controladores para usuarios, médicos, horarios
+* Interfaz principal del médico (Dashboard, Agenda, Pacientes)
+
+### 🧩 Sprint 2 - Funcionalidad extendida (16 al 30 de junio)
+
+* Módulo de pacientes: reserva de turnos, historial, cancelación
+* Panel institucional: CRUD de instituciones y gestión de médicos
+* Panel administrador: usuarios, estadísticas, reportes
+* Validaciones de superposición de horarios y duplicación
+* Documentación técnica y README completo
 
 ---
 
@@ -166,8 +209,8 @@ Relaciones principales:
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/usuario/genezis-turnos-medicos.git
-cd genezis-turnos-medicos
+git clone https://github.com/PowerSystem2024/PowerSystem2024-App-StartUp-Genezis.git
+cd PowerSystem2024-App-StartUp-Genezis
 ```
 
 ### 2. Crear un entorno virtual y activarlo
@@ -219,6 +262,8 @@ python main.py
 
 * 🔔 Notificaciones de turnos por email o SMS
 * 📅 Vista de calendario general por especialidad
+* 📅 Integración de API de Google Calendar
+* 🤖 Integración de agente virtual con IA
 * 📊 Panel de estadísticas y reportes para admins
 * 🌐 Exportación e importación de datos
 * 🧑‍💼 Gestión de usuarios por parte de admins
@@ -229,12 +274,11 @@ python main.py
 
 ## 📆 Timeline del Proyecto
 
-| Fase     | Fecha                       | Tareas principales                                  |
-| -------- |-----------------------------| --------------------------------------------------- |
-| Sprint 1 | Mayo 2025                   | Login, módulo médico, conexión Supabase             |
-| Sprint 2 | Primer Quincena Junio 2025  | Módulo pacientes, edición de horarios, validaciones |
-| Sprint 3 | Segunda Quincena Junio 2025 | Panel administrador, pruebas, mejoras visuales      |
 
+| Fase     | Fecha                       | Tareas principales                                                                                  |
+| -------- |-----------------------------|-----------------------------------------------------------------------------------------------------|
+| Sprint 1 | Primer Quincena Junio 2025  | Login, módulo médico, conexión Supabase                                                             |
+| Sprint 2 | Segunda Quincena Junio 2025 | Módulo pacientes, edición de horarios, validaciones, panel administrador, pruebas, mejoras visuales |
 ---
 
 ## 📄 Licencia
